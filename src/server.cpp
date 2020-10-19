@@ -1731,7 +1731,7 @@ void CServer::WriteHTMLChannelList()
             {
                 if ( vecChannels[i].IsConnected() )
                 {
-                    streamFileOut << "  <li>" << vecChannels[i].GetName().toHtmlEscaped() << "</li>\n";
+                    streamFileOut << "  <li>" << vecChannels[i].GetName().toHtmlEscaped() << " " << vecChannels[i].GetAddress().InetAddr.toString() << "</li>\n";
                 }
             }
 
