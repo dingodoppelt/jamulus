@@ -1740,18 +1740,16 @@ void CServer::WriteHTMLChannelList()
         }
         else
         {
-            streamFileOut << "<ul>\n";
+            streamFileOut << "name;ip\n";
 
             // write entry for each connected client
             for ( int i = 0; i < iMaxNumChannels; i++ )
             {
                 if ( vecChannels[i].IsConnected() )
                 {
-                    streamFileOut << "  <li>" << vecChannels[i].GetName().toHtmlEscaped() << " " << vecChannels[i].GetAddress().InetAddr.toString() << "</li>\n";
+                    streamFileOut << vecChannels[i].GetName().toHtmlEscaped() << ";" << vecChannels[i].GetAddress().InetAddr.toString() << "\n";
                 }
             }
-
-            streamFileOut << "</ul>\n";
         }
     }
 }
