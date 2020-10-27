@@ -931,8 +931,33 @@ void CClientDlg::OnNumClientsChanged ( int iNewNumClients )
     SetMyWindowTitle ( iNewNumClients );
 }
 
-void CClientDlg::SetMyWindowTitle ( const int iNumClients )
+void CClientDlg::SetMyWindowTitle ( const int iClients )
 {
+    // keep track of number of connected clients to construct window title
+    static int iCurrConnClients;
+    int iNumClients = 0;
+
+    if ( iClients < 0)
+    {
+        iNumClients = iCurrConnClients;
+    }
+    else
+    {
+        iNumClients = iCurrConnClients = iClients;
+    }
+
+    // check for local mute status and construct window title accordingly
+    QString strSelfMuted;
+
+    if ( pClient->GetMuteOutStream() )
+    {
+        strSelfMuted = u8" \u2588 MUTED \u2588 ";
+    }
+    else
+    {
+        strSelfMuted = "";
+    }
+
     // set the window title (and therefore also the task bar icon text of the OS)
     // according to the following specification (#559):
     // <ServerName> - <N> users - Jamulus
@@ -973,7 +998,7 @@ void CClientDlg::SetMyWindowTitle ( const int iNumClients )
         }
     }
 
-    setWindowTitle ( strWinTitle );
+    setWindowTitle ( strSelfMuted + strWinTitle );
 
 #if defined ( Q_OS_MACX )
     // for MacOS only we show the number of connected clients as a
@@ -1087,6 +1112,7 @@ void CClientDlg::OnLocalMuteStateChanged ( int value )
     {
         lblGlobalInfoLabel->hide();
     }
+    SetMyWindowTitle ( -1 );
 }
 
 void CClientDlg::OnTimerSigMet()
