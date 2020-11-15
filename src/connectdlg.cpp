@@ -144,7 +144,7 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     butConnect->setFocus();
 
     lvwServers->setSortingEnabled ( true );
-    lvwServers->sortItems ( 0, Qt::AscendingOrder );
+    lvwServers->sortItems ( 2, Qt::DescendingOrder );
 
     // set a placeholder text to explain how to filter occupied servers (#397)
     edtFilter->setPlaceholderText ( tr ( "Filter text, or # for occupied servers" ) );
