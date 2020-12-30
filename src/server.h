@@ -43,6 +43,7 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "streamer/jamstreamer.h"
 
 #include "threadpool.h"
 
@@ -320,6 +321,7 @@ signals:
                       const CVector<int16_t> vecsData );
 
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t> data );
 
     // pass through from jam controller
     void RestartRecorder();
