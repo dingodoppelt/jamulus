@@ -1195,11 +1195,10 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
 void CServer::MixStream ( const int iNumClients )
 {
     int               i, j, k;
-    CVector<float>&   vecfIntermProcBuf = vecvecfIntermediateProcBuf[0]; // use reference for faster access
     CVector<int16_t>& vecsSendData      = vecvecsSendData[0];            // use reference for faster access
 
     // init intermediate processing vector with zeros since we mix all channels on that vector
-    vecfIntermProcBuf.Reset ( 0 );
+    vecsSendData.Reset ( 0 );
 
     // Stereo target channel -----------------------------------------------
     for ( j = 0; j < iNumClients; j++ )
@@ -1213,8 +1212,8 @@ void CServer::MixStream ( const int iNumClients )
                     for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
                     {
                         // left/right channel
-                        vecfIntermProcBuf[k]     += vecsData[i];
-                        vecfIntermProcBuf[k + 1] += vecsData[i];
+                        vecsSendData[k]     += vecsData[i];
+                        vecsSendData[k + 1] += vecsData[i];
                     }
                 }
                 else
@@ -1222,15 +1221,9 @@ void CServer::MixStream ( const int iNumClients )
                     // stereo
                     for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
                     {
-                        vecfIntermProcBuf[i] += vecsData[i];
+                        vecsSendData[i] += vecsData[i];
                     }
                 }
-    }
-
-    // convert from double to short with clipping
-    for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
-    {
-        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
     }
 
     emit StreamFrame ( iServerFrameSizeSamples, vecsSendData );
