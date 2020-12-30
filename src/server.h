@@ -205,6 +205,8 @@ protected:
 
     void MixEncodeTransmitData ( const int iChanCnt, const int iNumClients );
 
+    void MixStream ( const int iNumClients );
+
     virtual void customEvent ( QEvent* pEvent );
 
     void CreateAndSendRecorderStateForAllConChannels();
