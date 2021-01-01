@@ -79,6 +79,7 @@ int main ( int argc, char** argv )
     QString      strConnOnStartupAddress     = "";
     QString      strIniFileName              = "";
     QString      strHTMLStatusFileName       = "";
+    QString      strCSVFileName              = "";
     QString      strLoggingFileName          = "";
     QString      strRecordingDirName         = "";
     QString      strCentralServer            = "";
@@ -333,6 +334,22 @@ int main ( int argc, char** argv )
             qInfo() << qUtf8Printable( QString( "- HTML status file name: %1" )
                 .arg( strHTMLStatusFileName ) );
             CommandLineOptions << "--htmlstatus";
+            continue;
+        }
+
+
+        // CSV status file ----------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--csvfile", // no short form
+                                 "--csvfile",
+                                 strArgument ) )
+        {
+            strCSVFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- CSV file name: " )
+                .arg( strCSVFileName ) );
+            CommandLineOptions << "--csvfile";
             continue;
         }
 
@@ -724,6 +741,7 @@ int main ( int argc, char** argv )
                              strLoggingFileName,
                              iPortNumber,
                              strHTMLStatusFileName,
+                             strCSVFileName,
                              strCentralServer,
                              strServerInfo,
                              strServerPublicIP,
@@ -853,8 +871,14 @@ QString UsageArguments ( char **argv )
         "      --mutemyown       mute me in my personal mix (headless only)\n"
         "  -c, --connect         connect to given server address on startup\n"
         "  -j, --nojackconnect   disable auto Jack connections\n"
+<<<<<<< HEAD
         "      --ctrlmidich      MIDI controller channel to listen\n"
         "      --clientname      client name (window title and jack client name)\n"
+=======
+        "  --ctrlmidich          MIDI controller channel to listen\n"
+        "  --clientname          client name (window title and jack client name)\n"
+        "  --csvfile             enable CSV status file, set file name\n"
+>>>>>>> don't break existing code anymore, enable csv file via cli option
         "\nExample: " + QString ( argv[0] ) + " -s --inifile myinifile.ini\n";
 }
 
