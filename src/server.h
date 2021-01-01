@@ -159,6 +159,7 @@ public:
               const quint16      iQosNumber,
               const QString&     strHTMLStatusFileName,
               const QString&     strDirectoryServer,
+              const QString&     strCSVFileName,
               const QString&     strServerListFileName,
               const QString&     strServerInfo,
               const QString&     strServerListFilter,
@@ -281,6 +282,7 @@ protected:
 
     void WriteHTMLChannelList();
     void WriteHTMLServerQuit();
+    void WriteCSVChannelList();
 
     static void DecodeReceiveDataBlocks ( CServer* pServer, const int iStartChanCnt, const int iStopChanCnt, const int iNumClients );
 
@@ -364,6 +366,10 @@ protected:
     // HTML file server status
     bool    bWriteStatusHTMLFile;
     QString strServerHTMLFileListName;
+
+    // CSV file server status
+    bool    bWriteStatusCSVFile;
+    QString strServerCSVFileListName;
 
     CHighPrecisionTimer HighPrecisionTimer;
 

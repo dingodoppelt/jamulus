@@ -91,6 +91,7 @@ int main ( int argc, char** argv )
     QString      strConnOnStartupAddress     = "";
     QString      strIniFileName              = "";
     QString      strHTMLStatusFileName       = "";
+    QString      strCSVFileName              = "";
     QString      strLoggingFileName          = "";
     QString      strRecordingDirName         = "";
     QString      strDirectoryServer          = "";
@@ -290,6 +291,21 @@ int main ( int argc, char** argv )
             qInfo() << qUtf8Printable ( QString ( "- HTML status file name: %1" ).arg ( strHTMLStatusFileName ) );
             CommandLineOptions << "--htmlstatus";
             ServerOnlyOptions << "--htmlstatus";
+            continue;
+        }
+
+        // CSV status file ----------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--csvfile", // no short form
+                                 "--csvfile",
+                                 strArgument ) )
+        {
+            strCSVFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- CSV file name: %1" )
+                .arg( strCSVFileName ) );
+            CommandLineOptions << "--csvfile";
             continue;
         }
 
@@ -854,6 +870,7 @@ int main ( int argc, char** argv )
                              iQosNumber,
                              strHTMLStatusFileName,
                              strDirectoryServer,
+                             strCSVFileName,
                              strServerListFileName,
                              strServerInfo,
                              strServerPublicIP,
@@ -970,6 +987,7 @@ QString UsageArguments ( char** argv )
            "  -l, --log             enable logging, set file name\n"
            "  -L, --licence         show an agreement window before users can connect\n"
            "  -m, --htmlstatus      enable HTML status file, set file name\n"
+           "      --csvfile         enable CSV status file, set file name\n"
            "  -o, --serverinfo      registration info for this server.  Format:\n"
            "                        [name];[city];[country as QLocale ID]\n"
            "      --serverpublicip  public IP address for this server.  Needed when\n"
@@ -1001,7 +1019,6 @@ QString UsageArguments ( char** argv )
            "https://jamulus.io/wiki/Command-Line-Options\n"
     ).arg( argv[0] );
     // clang-format on
-}
 
 bool GetFlagArgument ( char** argv, int& i, QString strShortOpt, QString strLongOpt )
 {
