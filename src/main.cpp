@@ -109,6 +109,7 @@ int main ( int argc, char** argv )
     QString      strLoggingFileName          = "";
     QString      strRecordingDirName         = "";
     QString      strDirectoryAddress         = "";
+    QString      strStreamDest               = "";
     QString      strServerListFileName       = "";
     QString      strServerInfo               = "";
     QString      strServerPublicIP           = "";
@@ -391,6 +392,21 @@ int main ( int argc, char** argv )
             qInfo() << qUtf8Printable ( QString ( "- recording directory name: %1" ).arg ( strRecordingDirName ) );
             CommandLineOptions << "--recording";
             ServerOnlyOptions << "--recording";
+            continue;
+        }
+
+        // Stream destination -------------------------------------------------
+        if ( GetStringArgument ( tsConsole,
+                                 argc,
+                                 argv,
+                                 i,
+                                 "--streamto",
+                                 "--streamto",
+                                 strArgument ) )
+        {
+            strStreamDest = strArgument;
+            tsConsole << "- stream destination: %1" << strStreamDest << endl;
+            CommandLineOptions << "--streamto";
             continue;
         }
 
@@ -992,6 +1008,7 @@ int main ( int argc, char** argv )
                              strServerListFilter,
                              strWelcomeMessage,
                              strRecordingDirName,
+                             strStreamDest,
                              bDisconnectAllClientsOnQuit,
                              bUseDoubleSystemFrameSize,
                              bUseMultithreading,

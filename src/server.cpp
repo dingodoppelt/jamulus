@@ -38,6 +38,7 @@ CServer::CServer ( const int          iNewMaxNumChan,
                    const QString&     strServerPublicIP,
                    const QString&     strNewWelcomeMessage,
                    const QString&     strRecordingDirName,
+                   const QString&     strStreamDest,
                    const bool         bNDisconnectAllClientsOnQuit,
                    const bool         bNUseDoubleSystemFrameSize,
                    const bool         bNUseMultithreading,
@@ -220,11 +221,14 @@ CServer::CServer ( const int          iNewMaxNumChan,
     SetRecordingDir ( strRecordingDirName );
     
     // enable jam streaming
-    QThread* pthJamStreamer = new QThread;
-    streamer::CJamStreamer* pJamStreamer = new streamer::CJamStreamer();
-    pJamStreamer->moveToThread(pthJamStreamer);
-    QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
-    pthJamStreamer->start();
+    if ( !strStreamDest.isEmpty() )
+    {
+        QThread* pthJamStreamer = new QThread;
+        streamer::CJamStreamer* pJamStreamer = new streamer::CJamStreamer( strStreamDest );
+        pJamStreamer->moveToThread(pthJamStreamer);
+        QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
+        pthJamStreamer->start();
+    }
 
     // enable all channels (for the server all channel must be enabled the
     // entire life time of the software)

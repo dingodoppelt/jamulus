@@ -99,6 +99,7 @@ public:
               const QString&     strServerPublicIP,
               const QString&     strNewWelcomeMessage,
               const QString&     strRecordingDirName,
+              const QString&     strStreamDest,
               const bool         bNDisconnectAllClientsOnQuit,
               const bool         bNUseDoubleSystemFrameSize,
               const bool         bNUseMultithreading,
