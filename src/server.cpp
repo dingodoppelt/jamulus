@@ -1765,23 +1765,39 @@ void CServer::WriteCSVChannelList()
     {
         QTextStream streamFileOut ( &serverFileListFile );
 
-        // depending on number of connected clients write list
-        if ( GetNumberOfConnectedClients() == 0 )
-        {
-            // no clients are connected -> empty server
-            streamFileOut << "  No client connected\n";
-        }
-        else
-        {
-            streamFileOut << "name;ip\n";
+        streamFileOut << "name;ip;city;country;instrument;instrumentPicture;skill\n";
 
-            // write entry for each connected client
-            for ( int i = 0; i < iMaxNumChannels; i++ )
+        // write entry for each connected client
+        for ( int i = 0; i < iMaxNumChannels; i++ )
+        {
+            if ( vecChannels[i].IsConnected() )
             {
-                if ( vecChannels[i].IsConnected() )
+                streamFileOut << "\"" << vecChannels[i].GetName().toHtmlEscaped() << "\"" << ";";
+                streamFileOut << "\"" << vecChannels[i].GetAddress().InetAddr.toString() << "\"" << ";";
+                streamFileOut << "\"" << vecChannels[i].GetChanInfo().strCity << "\"" << ";";
+                streamFileOut << "\"" << QLocale::countryToString(vecChannels[i].GetChanInfo().eCountry) << "\"" << ";";
+                streamFileOut << "\"" << CInstPictures::GetName(vecChannels[i].GetChanInfo().iInstrument) << "\"" << ";";
+                streamFileOut << "\"" << CInstPictures::GetResourceReference(vecChannels[i].GetChanInfo().iInstrument) << "\"" << ";";
+
+                switch ( vecChannels[i].GetChanInfo().eSkillLevel )
                 {
-                    streamFileOut << "\"" << vecChannels[i].GetName().toHtmlEscaped() << "\"" << ";" << vecChannels[i].GetAddress().InetAddr.toString() << "\n";
+                    case SL_BEGINNER:
+                        streamFileOut << "\"Beginner\"";
+                       break;
+
+                    case SL_INTERMEDIATE:
+                        streamFileOut << "\"Intermediate\"";
+                        break;
+
+                    case SL_PROFESSIONAL:
+                        streamFileOut << "\"Expert\"";
+                        break;
+
+                    case SL_NOT_SET:
+                        // skill level not set, do not add this entry
+                        break;
                 }
+                streamFileOut << "\n";
             }
         }
     }

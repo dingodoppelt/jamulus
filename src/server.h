@@ -30,6 +30,8 @@
 #include <QHostAddress>
 #include <QFileInfo>
 #include <QtConcurrent>
+#include <QFutureSynchronizer>
+#include <QLocale>
 #include <algorithm>
 #ifdef USE_OPUS_SHARED_LIB
 #    include "opus/opus_custom.h"
