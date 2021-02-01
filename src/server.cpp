@@ -1765,37 +1765,6 @@ void CServer::WriteCSVChannelList()
     {
         QTextStream streamFileOut ( &serverFileListFile );
 
-        // depending on number of connected clients write list
-        if ( GetNumberOfConnectedClients() == 0 )
-        {
-            // no clients are connected -> empty server
-            streamFileOut << "  No client connected\n";
-        }
-        else
-        {
-            streamFileOut << "name;ip\n";
-
-            // write entry for each connected client
-            for ( int i = 0; i < iMaxNumChannels; i++ )
-            {
-                if ( vecChannels[i].IsConnected() )
-                {
-                    streamFileOut << "\"" << vecChannels[i].GetName().toHtmlEscaped() << "\"" << ";" << vecChannels[i].GetAddress().InetAddr.toString() << "\n";
-                }
-            }
-        }
-    }
-}
-
-void CServer::WriteCSVChannelList()
-{
-    // prepare file and stream
-    QFile serverFileListFile ( strServerCSVFileListName );
-
-    if ( serverFileListFile.open ( QIODevice::WriteOnly | QIODevice::Text ) )
-    {
-        QTextStream streamFileOut ( &serverFileListFile );
-
         streamFileOut << "name;ip;city;country;instrument;instrumentPicture;skill\n";
 
         // write entry for each connected client
