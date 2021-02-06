@@ -1314,8 +1314,6 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt,
             DoubleFrameSizeConvBufOut[iCurChanID].GetAll ( vecsSendData, DOUBLE_SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt] );
         }
 
-        for ( int iB = 0; iB < vecNumFrameSizeConvBlocks[iChanCnt]; iB++ )
-        {
         // OPUS encoding
         if ( pCurOpusEncoder != nullptr )
         {
@@ -1323,12 +1321,13 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt,
             //      optimization it would be better to set it only if the network frame size is changed
             opus_custom_encoder_ctl ( pCurOpusEncoder, OPUS_SET_BITRATE ( CalcBitRateBitsPerSecFromCodedBytes ( iCeltNumCodedBytes, iClientFrameSizeSamples ) ) );
 
+            for ( int iB = 0; iB < vecNumFrameSizeConvBlocks[iChanCnt]; iB++ )
+            {
                 iUnused = opus_custom_encode ( pCurOpusEncoder,
                                             &vecsSendData[iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt]],
                                             iClientFrameSizeSamples,
                                             &vecvecbyCodedData[iChanCnt][0],
                                             iCeltNumCodedBytes );
-            }
 
             // send separate mix to current clients
             vecChannels[iCurChanID].PrepAndSendPacket ( &Socket,
@@ -1336,6 +1335,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt,
                                                         iCeltNumCodedBytes );
             }
         }
+    }
 
     Q_UNUSED ( iUnused )
 }
