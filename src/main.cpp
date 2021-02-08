@@ -395,11 +395,11 @@ int main ( int argc, char** argv )
             continue;
         }
 
-        // Stream destination -------------------------------------------------
+        // Stream destination ---------------------------------------------------------
         if ( GetStringArgument ( argc,
                                  argv,
                                  i,
-                                 "--streamto",
+                                 "--streamto", // no short form
                                  "--streamto",
                                  strArgument ) )
         {
