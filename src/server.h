@@ -378,6 +378,9 @@ protected:
     recorder::CJamController JamController;
     bool                     bDisableRecording;
 
+    // jam streamer
+    bool bStream = false;
+
     // GUI settings
     bool bAutoRunMinimized;
 
