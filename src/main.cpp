@@ -871,14 +871,9 @@ QString UsageArguments ( char **argv )
         "      --mutemyown       mute me in my personal mix (headless only)\n"
         "  -c, --connect         connect to given server address on startup\n"
         "  -j, --nojackconnect   disable auto Jack connections\n"
-<<<<<<< HEAD
         "      --ctrlmidich      MIDI controller channel to listen\n"
         "      --clientname      client name (window title and jack client name)\n"
-=======
-        "  --ctrlmidich          MIDI controller channel to listen\n"
-        "  --clientname          client name (window title and jack client name)\n"
-        "  --csvfile             enable CSV status file, set file name\n"
->>>>>>> don't break existing code anymore, enable csv file via cli option
+        "      --csvfile         enable CSV status file, set file name\n"
         "\nExample: " + QString ( argv[0] ) + " -s --inifile myinifile.ini\n";
 }
 
