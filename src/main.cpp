@@ -1018,7 +1018,7 @@ QString UsageArguments ( char** argv )
            "For more information and localized help see:\n"
            "https://jamulus.io/wiki/Command-Line-Options\n"
     ).arg( argv[0] );
-    // clang-format on 
+    // clang-format on
 
 bool GetFlagArgument ( char** argv, int& i, QString strShortOpt, QString strLongOpt )
 {
