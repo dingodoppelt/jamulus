@@ -866,6 +866,7 @@ QString UsageArguments ( char **argv )
         "      --serverpublicip  specify your public IP address when\n"
         "                        running a slave and your own central server\n"
         "                        behind the same NAT\n"
+        "      --csvfile         enable CSV status file, set file name\n"
         "\nClient only:\n"
         "  -M, --mutestream      starts the application in muted state\n"
         "      --mutemyown       mute me in my personal mix (headless only)\n"
@@ -873,7 +874,6 @@ QString UsageArguments ( char **argv )
         "  -j, --nojackconnect   disable auto Jack connections\n"
         "      --ctrlmidich      MIDI controller channel to listen\n"
         "      --clientname      client name (window title and jack client name)\n"
-        "      --csvfile         enable CSV status file, set file name\n"
         "\nExample: " + QString ( argv[0] ) + " -s --inifile myinifile.ini\n";
 }
 
