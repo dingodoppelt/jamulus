@@ -389,6 +389,7 @@ HEADERS += src/buffer.h \
     src/multicolorled.h \
     src/protocol.h \
     src/recorder/jamcontroller.h \
+    src/ThreadPool.h \
     src/server.h \
     src/serverlist.h \
     src/serverlogging.h \
