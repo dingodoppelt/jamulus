@@ -301,11 +301,13 @@ protected:
 
     void WriteHTMLChannelList();
 
-    void DecodeReceiveDataBlocks ( const int iStartChanCnt,
+    static void DecodeReceiveDataBlocks ( CServer* sServer,
+                                   const int iStartChanCnt,
                                    const int iStopChanCnt,
                                    const int iNumClients );
 
-    void MixEncodeTransmitDataBlocks ( const int iStartChanCnt,
+    static void MixEncodeTransmitDataBlocks ( CServer* sServer,
+                                       const int iStartChanCnt,
                                        const int iStopChanCnt,
                                        const int iNumClients );
 
@@ -322,9 +324,10 @@ protected:
     int                        iServerFrameSizeSamples;
 
     // variables needed for multithreading support
-    bool                      bUseMultithreading;
-    int                       iMaxNumThreads;
-    QFutureSynchronizer<void> FutureSynchronizer;
+    bool                       bUseMultithreading;
+    int                        iMaxNumThreads;
+    // QFutureSynchronizer<void>  FutureSynchronizer;
+    CVector<std::future<void>> Futures;
 
     bool CreateLevelsForAllConChannels  ( const int                        iNumClients,
                                           const CVector<int>&              vecNumAudioChannels,
