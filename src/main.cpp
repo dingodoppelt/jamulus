@@ -347,7 +347,7 @@ int main ( int argc, char** argv )
                                  strArgument ) )
         {
             strCSVFileName = strArgument;
-            qInfo() << qUtf8Printable( QString( "- CSV file name: " )
+            qInfo() << qUtf8Printable( QString( "- CSV file name: %1" )
                 .arg( strCSVFileName ) );
             CommandLineOptions << "--csvfile";
             continue;
