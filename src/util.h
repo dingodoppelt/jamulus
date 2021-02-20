@@ -494,19 +494,6 @@ signals:
 #endif
 
 
-// Console writer factory ------------------------------------------------------
-// this class was written by pljones
-class ConsoleWriterFactory
-{
-public:
-    ConsoleWriterFactory() : ptsConsole ( nullptr ) { }
-    QTextStream* get();
-
-private:
-    QTextStream* ptsConsole;
-};
-
-
 /******************************************************************************\
 * Other Classes/Enums                                                          *
 \******************************************************************************/
@@ -1117,6 +1104,7 @@ public:
     static CHostAddress GetLocalAddress();
     static QString      GetCentralServerAddress ( const ECSAddType eCentralServerAddressType,
                                                   const QString&   strCentralServerAddress );
+    static bool         IsPrivateNetworkIP ( const QHostAddress& qhAddr );
 };
 
 
