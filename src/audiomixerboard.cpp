@@ -1362,7 +1362,9 @@ void CAudioMixerBoard::AutoAdjustAllFaderLevels()
 
     // only my channel is active, nothing to do
     if ( cntActiveGroups == 0 )
+    {
         return;
+    }
 
     // compute target level for each group
     // (prevent clipping when each group contributes at maximum level)
