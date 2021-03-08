@@ -79,6 +79,7 @@ int main ( int argc, char** argv )
     QString      strConnOnStartupAddress     = "";
     QString      strIniFileName              = "";
     QString      strHTMLStatusFileName       = "";
+    QString      strCSVFileName              = "";
     QString      strLoggingFileName          = "";
     QString      strRecordingDirName         = "";
     QString      strStreamDest               = "";
@@ -334,6 +335,22 @@ int main ( int argc, char** argv )
             qInfo() << qUtf8Printable( QString( "- HTML status file name: %1" )
                 .arg( strHTMLStatusFileName ) );
             CommandLineOptions << "--htmlstatus";
+            continue;
+        }
+
+
+        // CSV status file ----------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--csvfile", // no short form
+                                 "--csvfile",
+                                 strArgument ) )
+        {
+            strCSVFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- CSV file name: %1" )
+                .arg( strCSVFileName ) );
+            CommandLineOptions << "--csvfile";
             continue;
         }
 
@@ -741,6 +758,7 @@ int main ( int argc, char** argv )
                              strLoggingFileName,
                              iPortNumber,
                              strHTMLStatusFileName,
+                             strCSVFileName,
                              strCentralServer,
                              strServerInfo,
                              strServerPublicIP,
@@ -866,6 +884,7 @@ QString UsageArguments ( char **argv )
         "      --serverpublicip  specify your public IP address when\n"
         "                        running a slave and your own central server\n"
         "                        behind the same NAT\n"
+        "      --csvfile         enable CSV status file, set file name\n"
         "\nClient only:\n"
         "  -M, --mutestream      starts the application in muted state\n"
         "      --mutemyown       mute me in my personal mix (headless only)\n"
