@@ -49,6 +49,8 @@
 #include "recorder/jamcontroller.h"
 #include "streamer/jamstreamer.h"
 
+#include "ThreadPool.h"
+
 /* Definitions ****************************************************************/
 // no valid channel number
 #define INVALID_CHANNEL_ID                  ( MAX_NUM_CHANNELS + 1 )
@@ -306,11 +308,13 @@ protected:
     
     void WriteCSVChannelList();
 
-    void DecodeReceiveDataBlocks ( const int iStartChanCnt,
+    static void DecodeReceiveDataBlocks ( CServer* sServer,
+                                   const int iStartChanCnt,
                                    const int iStopChanCnt,
                                    const int iNumClients );
 
-    void MixEncodeTransmitDataBlocks ( const int iStartChanCnt,
+    static void MixEncodeTransmitDataBlocks ( CServer* sServer,
+                                       const int iStartChanCnt,
                                        const int iStopChanCnt,
                                        const int iNumClients );
 
@@ -329,8 +333,10 @@ protected:
     int                        iServerFrameSizeSamples;
 
     // variables needed for multithreading support
-    bool                      bUseMultithreading;
-    QFutureSynchronizer<void> FutureSynchronizer;
+    bool                       bUseMultithreading;
+    int                        iMaxNumThreads;
+    // QFutureSynchronizer<void>  FutureSynchronizer;
+    CVector<std::future<void>> Futures;
 
     bool CreateLevelsForAllConChannels  ( const int                        iNumClients,
                                           const CVector<int>&              vecNumAudioChannels,
@@ -415,6 +421,8 @@ protected:
     bool                       bDisconnectAllClientsOnQuit;
 
     CSignalHandler*            pSignalHandler;
+
+    std::unique_ptr<ThreadPool>tpThreadPool;
 
 signals:
     void Started();

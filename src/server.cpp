@@ -22,7 +22,8 @@
  *
 \******************************************************************************/
 
-#include "server.h"
+#include "server.h"  
+#include "ThreadPool.h"
 
 
 // CHighPrecisionTimer implementation ******************************************
@@ -439,10 +440,25 @@ CServer::CServer ( const int          iNewMaxNumChan,
         vecChannels[i].SetEnable ( true );
     }
 
-    // introduced by kraney (#653): "increased the size of the thread pool"
-    if ( bUseMultithreading )
-    {
-        QThreadPool::globalInstance()->setMaxThreadCount ( QThread::idealThreadCount() * 4 );
+    int iAvailableCores = QThread::idealThreadCount();
+
+    // setup QThreadPool if multithreading is active and possible
+    if(bUseMultithreading) {
+        if (iAvailableCores == 1 )
+        {
+            qDebug() << "found only one core, disable multithreading";
+            bUseMultithreading = false;
+        } 
+        else
+        {
+            // set maximum thread count to available -1 to keep one core for the gui, timer and receive threads
+            iMaxNumThreads = iAvailableCores - 1;
+            qDebug() << "multithreading enabled, setting thread count to" << iMaxNumThreads;
+            // QThreadPool::globalInstance()->setMaxThreadCount ( iMaxNumThreads );
+
+            tpThreadPool = std::unique_ptr<ThreadPool>( new ThreadPool{static_cast<size_t>(iMaxNumThreads)} );
+            Futures.reserve(iMaxNumThreads);
+        }
     }
 
 
@@ -578,12 +594,12 @@ inline void CServer::connectChannelSignalsToServerSlots()
 template<>
 inline void CServer::connectChannelSignalsToServerSlots<0>() {}
 
-void CServer::CreateAndSendJitBufMessage ( const int iCurChanID,
+void CServer::CreateAndSendJitBufMessage ( const int iCurChanID, 
                                            const int iNNumFra )
 {
     vecChannels[iCurChanID].CreateJitBufMes ( iNNumFra );
 }
-
+ 
 CServer::~CServer()
 {
     for ( int i = 0; i < iMaxNumChannels; i++ )
@@ -658,8 +674,8 @@ void CServer::OnNewConnection ( int          iChID,
     vecChannels[iChID].CreateReqChanInfoMes();
 
     // send welcome message (if enabled)
-    MutexWelcomeMessage.lock();
     {
+        QMutexLocker locker ( &MutexWelcomeMessage );
         if ( !strWelcomeMessage.isEmpty() )
         {
             // create formatted server welcome message and send it just to
@@ -670,7 +686,6 @@ void CServer::OnNewConnection ( int          iChID,
             vecChannels[iChID].CreateChatTextMes ( strWelcomeMessageFormated );
         }
     }
-    MutexWelcomeMessage.unlock();
 
     // send licence request message (if enabled)
     if ( eLicenceType != LT_NO_LICENCE )
@@ -725,17 +740,14 @@ void CServer::OnAboutToQuit()
     // if enabled, disconnect all clients on quit
     if ( bDisconnectAllClientsOnQuit )
     {
-        Mutex.lock();
+        QMutexLocker locker ( &Mutex );
+        for ( int i = 0; i < iMaxNumChannels; i++ )
         {
-            for ( int i = 0; i < iMaxNumChannels; i++ )
+            if ( vecChannels[i].IsConnected() )
             {
-                if ( vecChannels[i].IsConnected() )
-                {
-                    ConnLessProtocol.CreateCLDisconnection ( vecChannels[i].GetAddress() );
-                }
+                ConnLessProtocol.CreateCLDisconnection ( vecChannels[i].GetAddress() );
             }
         }
-        Mutex.unlock(); // release mutex
     }
 
     Stop();
@@ -818,13 +830,16 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
 */
     // Get data from all connected clients -------------------------------------
     // some inits
-    int iNumClients           = 0; // init connected client counter
+    int  iNumClients          = 0; // init connected client counter
+    bool bUseMT               = false;
+    int  iNumBlocks           = 0; // init number of blocks for multithreading
+    int  iMTBlockSize         = 0; // init block size for multithreading
     bChannelIsNowDisconnected = false; // note that the flag must be a member function since QtConcurrent::run can only take 5 params
 
-    // Make put and get calls thread safe. Do not forget to unlock mutex
-    // afterwards!
-    Mutex.lock();
     {
+        // Make put and get calls thread safe. 
+        QMutexLocker locker ( &Mutex );
+
         // first, get number and IDs of connected channels
         for ( int i = 0; i < iMaxNumChannels; i++ )
         {
@@ -839,21 +854,20 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
             }
         }
 
+        bUseMT = bUseMultithreading && iNumClients >= 10;
+
         // prepare and decode connected channels
-        if ( !bUseMultithreading )
+        if ( !bUseMT )
         {
-            for ( int iChanCnt = 0; iChanCnt < iNumClients; iChanCnt++ )
-            {
-                DecodeReceiveData ( iChanCnt, iNumClients );
-            }
+            DecodeReceiveDataBlocks ( this, 0, iNumClients - 1, iNumClients );
         }
         else
         {
-            // processing with multithreading
-// TODO optimization of the MTBlockSize value
-            const int iMTBlockSize = 10; // every 10 users a new thread is created
-            const int iNumBlocks   = ( iNumClients - 1 ) / iMTBlockSize + 1;
+            // spread work equally among available threads
+            iNumBlocks   = std::min( iNumClients, iMaxNumThreads );
+            iMTBlockSize = ( iNumClients - 1 ) / iNumBlocks + 1;
 
+            // processing with multithreading
             for ( int iBlockCnt = 0; iBlockCnt < iNumBlocks; iBlockCnt++ )
             {
                 // The work for OPUS decoding is distributed over all available processor cores.
@@ -862,16 +876,23 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
                 const int iStartChanCnt = iBlockCnt * iMTBlockSize;
                 const int iStopChanCnt  = std::min ( ( iBlockCnt + 1 ) * iMTBlockSize - 1, iNumClients - 1 );
 
-                FutureSynchronizer.addFuture ( QtConcurrent::run ( this,
-                                                                   &CServer::DecodeReceiveDataBlocks,
-                                                                   iStartChanCnt,
-                                                                   iStopChanCnt,
-                                                                   iNumClients ) );
+                Futures.push_back ( tpThreadPool->enqueue ( CServer::DecodeReceiveDataBlocks, 
+                                                    this, iStartChanCnt, iStopChanCnt, iNumClients ) );
+
+                // FutureSynchronizer.addFuture ( QtConcurrent::run ( &CServer::DecodeReceiveDataBlocks,
+                //                                                    this,
+                //                                                    iStartChanCnt,
+                //                                                    iStopChanCnt,
+                //                                                    iNumClients ) );
             }
 
             // make sure all concurrent run threads have finished when we leave this function
-            FutureSynchronizer.waitForFinished();
-            FutureSynchronizer.clearFutures();
+            for ( auto& future : Futures ) {
+                future.wait();
+            }
+            Futures.clear();
+            // FutureSynchronizer.waitForFinished();
+            // FutureSynchronizer.clearFutures();
         }
 
         // a channel is now disconnected, take action on it
@@ -881,7 +902,6 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
             CreateAndSendChanListForAllConChannels();
         }
     }
-    Mutex.unlock(); // release mutex
 
 
     // Process data ------------------------------------------------------------
@@ -927,7 +947,7 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
             }
 
             // processing without multithreading
-            if ( !bUseMultithreading )
+            if ( !bUseMT )
             {
                 // generate a separate mix for each channel, OPUS encode the
                 // audio data and transmit the network packet
@@ -936,14 +956,8 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
         }
 
         // processing with multithreading
-        if ( bUseMultithreading )
+        if ( bUseMT )
         {
-            // introduced by kraney (#653): each thread must complete within the 1 or 2ms time budget for the timer
-// TODO determine at startup by running a small benchmark
-            const int iMaximumMixOpsInTimeBudget = 500; // approximate limit as observed on GCP e2-standard instance
-            const int iMTBlockSize = iMaximumMixOpsInTimeBudget / iNumClients; // number of ops = block size * total number of clients
-            const int iNumBlocks   = ( iNumClients - 1 ) / iMTBlockSize + 1;
-
             for ( int iBlockCnt = 0; iBlockCnt < iNumBlocks; iBlockCnt++ )
             {
                 // Generate a separate mix for each channel, OPUS encode the
@@ -954,16 +968,23 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
                 const int iStartChanCnt = iBlockCnt * iMTBlockSize;
                 const int iStopChanCnt  = std::min ( ( iBlockCnt + 1 ) * iMTBlockSize - 1, iNumClients - 1 );
 
-                FutureSynchronizer.addFuture ( QtConcurrent::run ( this,
-                                                                   &CServer::MixEncodeTransmitDataBlocks,
-                                                                   iStartChanCnt,
-                                                                   iStopChanCnt,
-                                                                   iNumClients ) );
+                Futures.push_back ( tpThreadPool->enqueue ( CServer::MixEncodeTransmitDataBlocks, 
+                                                    this, iStartChanCnt, iStopChanCnt, iNumClients ) );
+
+                // FutureSynchronizer.addFuture ( QtConcurrent::run ( &CServer::MixEncodeTransmitDataBlocks,
+                //                                                    this,
+                //                                                    iStartChanCnt,
+                //                                                    iStopChanCnt,
+                //                                                    iNumClients ) );
             }
 
             // make sure all concurrent run threads have finished when we leave this function
-            FutureSynchronizer.waitForFinished();
-            FutureSynchronizer.clearFutures();
+            for ( auto& fFuture : Futures ) {
+                fFuture.wait();
+            }
+            Futures.clear();
+            // FutureSynchronizer.waitForFinished();
+            // FutureSynchronizer.clearFutures();
         }
     }
     else
@@ -974,25 +995,27 @@ static CTimingMeas JitterMeas ( 1000, "test2.dat" ); JitterMeas.Measure(); // TE
     }
 }
 
-void CServer::DecodeReceiveDataBlocks ( const int iStartChanCnt,
+void CServer::DecodeReceiveDataBlocks ( CServer*  sServer, 
+                                        const int iStartChanCnt,
                                         const int iStopChanCnt,
                                         const int iNumClients )
 {
     // loop over all channels in the current block, needed for multithreading support
     for ( int iChanCnt = iStartChanCnt; iChanCnt <= iStopChanCnt; iChanCnt++ )
     {
-        DecodeReceiveData ( iChanCnt, iNumClients );
+        sServer->DecodeReceiveData ( iChanCnt, iNumClients );
     }
 }
 
-void CServer::MixEncodeTransmitDataBlocks ( const int iStartChanCnt,
+void CServer::MixEncodeTransmitDataBlocks ( CServer*  sServer, 
+                                            const int iStartChanCnt,
                                             const int iStopChanCnt,
                                             const int iNumClients )
 {
     // loop over all channels in the current block, needed for multithreading support
     for ( int iChanCnt = iStartChanCnt; iChanCnt <= iStopChanCnt; iChanCnt++ )
     {
-        MixEncodeTransmitData ( iChanCnt, iNumClients );
+        sServer->MixEncodeTransmitData ( iChanCnt, iNumClients );
     }
 }
 
@@ -1341,26 +1364,26 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt,
             DoubleFrameSizeConvBufOut[iCurChanID].GetAll ( vecsSendData, DOUBLE_SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt] );
         }
 
-        for ( int iB = 0; iB < vecNumFrameSizeConvBlocks[iChanCnt]; iB++ )
+        // OPUS encoding
+        if ( pCurOpusEncoder != nullptr )
         {
-            // OPUS encoding
-            if ( pCurOpusEncoder != nullptr )
-            {
 // TODO find a better place than this: the setting does not change all the time so for speed
 //      optimization it would be better to set it only if the network frame size is changed
 opus_custom_encoder_ctl ( pCurOpusEncoder, OPUS_SET_BITRATE ( CalcBitRateBitsPerSecFromCodedBytes ( iCeltNumCodedBytes, iClientFrameSizeSamples ) ) );
 
+            for ( size_t iB = 0; iB < vecNumFrameSizeConvBlocks[iChanCnt]; iB++ )
+            {
                 iUnused = opus_custom_encode ( pCurOpusEncoder,
-                                               &vecsSendData[iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt]],
-                                               iClientFrameSizeSamples,
-                                               &vecvecbyCodedData[iChanCnt][0],
-                                               iCeltNumCodedBytes );
-            }
+                                            &vecsSendData[iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt]],
+                                            iClientFrameSizeSamples,
+                                            &vecvecbyCodedData[iChanCnt][0],
+                                            iCeltNumCodedBytes );
 
-            // send separate mix to current clients
-            vecChannels[iCurChanID].PrepAndSendPacket ( &Socket,
-                                                        vecvecbyCodedData[iChanCnt],
-                                                        iCeltNumCodedBytes );
+                // send separate mix to current clients
+                vecChannels[iCurChanID].PrepAndSendPacket ( &Socket,
+                                                            vecvecbyCodedData[iChanCnt],
+                                                            iCeltNumCodedBytes );
+            }
         }
     }
 
