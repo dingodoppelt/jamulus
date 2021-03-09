@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2020
+ * Copyright (c) 2004-2021
  *
  * Author(s):
  *  Volker Fischer
@@ -21,6 +21,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  *
 \******************************************************************************/
+//******************************************************************************************
+//  Pan-Delay code added by Detlef Hennings, www.eclim.de,   2020-06
+//******************************************************************************************
 
 #pragma once
 
@@ -189,6 +192,7 @@ public:
               const bool         bNUseDoubleSystemFrameSize,
               const bool         bNUseMultithreading,
               const bool         bDisableRecording,
+              const bool         bNDelayPan,
               const ELicenceType eNLicenceType );
 
     virtual ~CServer();
@@ -227,6 +231,9 @@ public:
 
     void CreateAndSendRecorderStateForAllConChannels();
 
+    //**************************** delay panning
+    void SetEnableDelayPanning ( bool bDelayPanningOn ) { bDelayPan = bDelayPanningOn; }
+    bool IsDelayPanningEnabled() { return bDelayPan; }
 
     // Server list management --------------------------------------------------
     void UpdateServerList() { ServerListManager.Update(); }
@@ -372,6 +379,7 @@ protected:
     CVector<CVector<float> >   vecvecfGains;
     CVector<CVector<float> >   vecvecfPannings;
     CVector<CVector<int16_t> > vecvecsData;
+    CVector<CVector<int16_t> > vecvecsData2;
     CVector<int>               vecNumAudioChannels;
     CVector<int>               vecNumFrameSizeConvBlocks;
     CVector<int>               vecUseDoubleSysFraSizeConvBuf;
@@ -414,6 +422,9 @@ protected:
 
     // GUI settings
     bool                       bAutoRunMinimized;
+
+    // for delay panning
+    bool                       bDelayPan;
 
     // messaging
     QString                    strWelcomeMessage;
