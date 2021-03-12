@@ -435,7 +435,6 @@ CONNECTION LESS MESSAGES
 */
 
 #include "protocol.h"
-#include <iostream>
 
 /* Implementation *************************************************************/
 CProtocol::CProtocol()
@@ -2590,6 +2589,7 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     return false; // no error
 }
 
+// external chat
 bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
 
 {
@@ -2610,9 +2610,8 @@ bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
     {
         return true; // return error code
     }
-    std::string utf8_text = strChatText.toUtf8().constData();
     // invoke message action
-    std::cout << "chat text:" << utf8_text;
+    emit CLExtChatMessReceived ( strChatText );
 
     return false; // no error 
 }
