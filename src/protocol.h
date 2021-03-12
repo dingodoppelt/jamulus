@@ -83,6 +83,7 @@
 #define PROTMESSID_CLM_REGISTER_SERVER_RESP   1016 // status of server registration request
 #define PROTMESSID_CLM_REGISTER_SERVER_EX     1017 // register server with extended information
 #define PROTMESSID_CLM_RED_SERVER_LIST        1018 // reduced server list
+#define PROTMESSID_CLM_EXT_CHAT_TEXT          1019 // external chat text
 
 // special IDs
 #define PROTMESSID_SPECIAL_SPLIT_MESSAGE 2001 // a container for split messages
@@ -267,6 +268,7 @@ protected:
     bool EvaluateCLReqConnClientsListMes ( const CHostAddress& InetAddr );
     bool EvaluateCLChannelLevelListMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
+    bool EvaluateCLExtChatText           ( const CVector<uint8_t>& vecData );
 
     int iOldRecID;
     int iOldRecCnt;
