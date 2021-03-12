@@ -393,4 +393,6 @@ signals:
                                         CVector<uint16_t>      vecLevelList );
     void CLRegisterServerResp         ( CHostAddress           InetAddr,
                                         ESvrRegResult          eStatus );
+    // external chat
+    void CLExtChatMessReceived        ( QString                strExtChatText );
 };
