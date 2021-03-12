@@ -2,7 +2,7 @@
 
 
 
-### 3.6.2dev <- NOTE: the release version number will be 3.7.0 ###
+### 3.7.0rc1 <- NOTE: the release version number will be 3.7.0 ###
 
 - introduced new server lists: Any Genre 3, Choral/Barbershop (#875),
   also renamed Default to Any Genre 1, Any Genre to Any Genre 2,
@@ -49,14 +49,13 @@
   logic (#633, #1092), suggested by atsampson, coded by hoffie
 
 - bug fix: properly restore mixer levels after reconnecting to a restarted
-  server. updating the server or the client is sufficient to fix this. coded
-  by hoffie (#955, #1009, #1010)
+  server. This is a server-side fix. coded by hoffie (#955, #1010)
 
 - Improve update version detection, coded by softins (#1155)
   Check two servers instead of one (updatecheck1.jamulus.io and updatecheck2.jamulus.io).
   Ignore the server version if it is not a release, due to a suffix such as dev, alpha or beta.
 
-- Windows installer interface now supports English, Dutch, French, German, Polish, Spanish and Swedish.
+- Windows installer interface now supports English, Dutch, French, German, Italian, Polish, Portuguese, Spanish and Swedish.
 
 - bug fix: Fixed some memory leaks in server recording, coded by softins (#1073)
 
@@ -66,6 +65,8 @@
   Compatible with Ubuntu 18.04 or later.
 
 - Release now builds experimental .apk installation packages for Android, coded by nefarius2001 (#880)
+
+- bug fix: Added missing driverInfo initialisation in Windows sound driver, coded by npostavs (#1194)
 
 ### 3.6.2 (2020-12-12) ###
 
