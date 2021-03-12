@@ -1464,13 +1464,11 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
 void CServer::CreateAndSendExtChatTextForAllConChannels ( const QString& strChatText )
 {
     // Create message which is sent to all connected clients -------------------
-    // get client name
-    QString ChanName = "EXTERN";
 
-    const QString strActualMessageText =
-        "<font color=\"hotpink\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
+    const QString strActualMessageText = strChatText;
+       /* "<font color=\"hotpink\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
         ChanName.toHtmlEscaped() +
-        "</b></font> " + strChatText.toHtmlEscaped();
+        "</b></font> " + strChatText.toHtmlEscaped();*/
 
 
     // Send chat text to all connected clients ---------------------------------
