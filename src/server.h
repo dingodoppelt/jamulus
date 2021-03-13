@@ -153,7 +153,8 @@ protected:
 
     virtual void CreateAndSendChatTextForAllConChannels ( const int      iCurChanID,
                                                           const QString& strChatText ) = 0;
-
+    // external chat
+    virtual void CreateAndSendExtChatTextForAllConChannels ( const QString& strChatText );
     virtual void CreateOtherMuteStateChanged ( const int  iCurChanID,
                                                const int  iOtherChanID,
                                                const bool bIsMuted ) = 0;
@@ -290,6 +291,8 @@ protected:
 
     virtual void CreateAndSendChatTextForAllConChannels ( const int      iCurChanID,
                                                           const QString& strChatText );
+    // external chat
+    virtual void CreateAndSendExtChatTextForAllConChannels ( const QString& strExtChatText );
 
     virtual void CreateOtherMuteStateChanged ( const int  iCurChanID,
                                                const int  iOtherChanID,
@@ -531,6 +534,11 @@ public slots:
     void OnAboutToQuit();
 
     void OnHandledSignal ( int sigNum );
+    // external chat
+    void OnCLExtChatMessReceived ( QString strExtChatText )
+    {
+        CreateAndSendExtChatTextForAllConChannels ( strExtChatText );
+    }
 };
 
 Q_DECLARE_METATYPE(CVector<int16_t>)
