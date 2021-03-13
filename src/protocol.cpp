@@ -916,6 +916,10 @@ void CProtocol::ParseConnectionLessMessageBody ( const CVector<uint8_t>& vecbyMe
     case PROTMESSID_CLM_REGISTER_SERVER_RESP:
         EvaluateCLRegisterServerResp ( InetAddr, vecbyMesBodyData );
         break;
+
+    case PROTMESSID_CLM_API_STREAMER:
+        EvaluateCLAPIStreamer ();
+        break;
     }
 }
 
@@ -2577,6 +2581,11 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     emit CLRegisterServerResp ( InetAddr, static_cast<ESvrRegResult> ( iSvrRegResult ) );
 
     return false; // no error
+}
+
+void CProtocol::EvaluateCLAPIStreamer ()
+{
+    emit CLAPIToggleStreamer();
 }
 
 /******************************************************************************\

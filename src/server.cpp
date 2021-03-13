@@ -230,6 +230,8 @@ CServer::CServer ( const int          iNewMaxNumChan,
         pJamStreamer->moveToThread(pthJamStreamer);
         QObject::connect( this, &CServer::Started, pJamStreamer, &streamer::CJamStreamer::OnStarted );
         QObject::connect( this, &CServer::Stopped, pJamStreamer, &streamer::CJamStreamer::OnStopped );
+        QObject::connect( &ConnLessProtocol, &CProtocol::CLAPIToggleStreamer,
+                          pJamStreamer, &streamer::CJamStreamer::OnToggle );
         QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
         pthJamStreamer->start();
     }
