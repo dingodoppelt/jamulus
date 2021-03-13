@@ -79,8 +79,10 @@ int main ( int argc, char** argv )
     QString      strConnOnStartupAddress     = "";
     QString      strIniFileName              = "";
     QString      strHTMLStatusFileName       = "";
+    QString      strCSVFileName              = "";
     QString      strLoggingFileName          = "";
     QString      strRecordingDirName         = "";
+    QString      strStreamDest               = "";
     QString      strCentralServer            = "";
     QString      strServerInfo               = "";
     QString      strServerPublicIP           = "";
@@ -337,6 +339,22 @@ int main ( int argc, char** argv )
         }
 
 
+        // CSV status file ----------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--csvfile", // no short form
+                                 "--csvfile",
+                                 strArgument ) )
+        {
+            strCSVFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- CSV file name: %1" )
+                .arg( strCSVFileName ) );
+            CommandLineOptions << "--csvfile";
+            continue;
+        }
+
+
         // Client Name ---------------------------------------------------------
         if ( GetStringArgument ( argc,
                                  argv,
@@ -365,6 +383,22 @@ int main ( int argc, char** argv )
             qInfo() << qUtf8Printable( QString("- recording directory name: %1" )
                 .arg( strRecordingDirName ) );
             CommandLineOptions << "--recording";
+            continue;
+        }
+
+
+        // Stream destination ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--streamto", // no short form
+                                 "--streamto",
+                                 strArgument ) )
+        {
+            strStreamDest = strArgument;
+            qInfo() << qUtf8Printable( QString( "- stream destination: %1" )
+                .arg( strStreamDest ) );
+            CommandLineOptions << "--streamto";
             continue;
         }
 
@@ -724,12 +758,14 @@ int main ( int argc, char** argv )
                              strLoggingFileName,
                              iPortNumber,
                              strHTMLStatusFileName,
+                             strCSVFileName,
                              strCentralServer,
                              strServerInfo,
                              strServerPublicIP,
                              strServerListFilter,
                              strWelcomeMessage,
                              strRecordingDirName,
+                             strStreamDest,
                              bDisconnectAllClientsOnQuit,
                              bUseDoubleSystemFrameSize,
                              bUseMultithreading,
@@ -848,6 +884,7 @@ QString UsageArguments ( char **argv )
         "      --serverpublicip  specify your public IP address when\n"
         "                        running a slave and your own central server\n"
         "                        behind the same NAT\n"
+        "      --csvfile         enable CSV status file, set file name\n"
         "\nClient only:\n"
         "  -M, --mutestream      starts the application in muted state\n"
         "      --mutemyown       mute me in my personal mix (headless only)\n"

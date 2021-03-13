@@ -402,6 +402,7 @@ HEADERS += src/buffer.h \
     src/global.h \
     src/protocol.h \
     src/recorder/jamcontroller.h \
+    src/ThreadPool.h \
     src/server.h \
     src/serverlist.h \
     src/serverlogging.h \
@@ -413,7 +414,8 @@ HEADERS += src/buffer.h \
     src/recorder/jamrecorder.h \
     src/recorder/creaperproject.h \
     src/recorder/cwavestream.h \
-    src/signalhandler.h
+    src/signalhandler.h \
+    src/streamer/jamstreamer.h
 
 HEADERS_GUI = src/audiomixerboard.h \
     src/chatdlg.h \
@@ -512,7 +514,8 @@ SOURCES += src/buffer.cpp \
     src/util.cpp \
     src/recorder/jamrecorder.cpp \
     src/recorder/creaperproject.cpp \
-    src/recorder/cwavestream.cpp
+    src/recorder/cwavestream.cpp \
+    src/streamer/jamstreamer.cpp
 
 SOURCES_GUI = src/audiomixerboard.cpp \
     src/chatdlg.cpp \

@@ -31,6 +31,7 @@
 #include <QFileInfo>
 #include <QtConcurrent>
 #include <QFutureSynchronizer>
+#include <QLocale>
 #include <algorithm>
 #ifdef USE_OPUS_SHARED_LIB
 # include "opus/opus_custom.h"
@@ -46,6 +47,9 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "streamer/jamstreamer.h"
+
+#include "ThreadPool.h"
 
 /* Definitions ****************************************************************/
 // no valid channel number
@@ -173,12 +177,14 @@ public:
               const QString&     strLoggingFileName,
               const quint16      iPortNumber,
               const QString&     strHTMLStatusFileName,
+              const QString&     strCSVFileName,
               const QString&     strCentralServer,
               const QString&     strServerInfo,
               const QString&     strServerListFilter,
               const QString&     strServerPublicIP,
               const QString&     strNewWelcomeMessage,
               const QString&     strRecordingDirName,
+              const QString&     strStreamDest,
               const bool         bNDisconnectAllClientsOnQuit,
               const bool         bNUseDoubleSystemFrameSize,
               const bool         bNUseMultithreading,
@@ -299,12 +305,16 @@ protected:
     inline void connectChannelSignalsToServerSlots();
 
     void WriteHTMLChannelList();
+    
+    void WriteCSVChannelList();
 
-    void DecodeReceiveDataBlocks ( const int iStartChanCnt,
+    static void DecodeReceiveDataBlocks ( CServer* sServer,
+                                   const int iStartChanCnt,
                                    const int iStopChanCnt,
                                    const int iNumClients );
 
-    void MixEncodeTransmitDataBlocks ( const int iStartChanCnt,
+    static void MixEncodeTransmitDataBlocks ( CServer* sServer,
+                                       const int iStartChanCnt,
                                        const int iStopChanCnt,
                                        const int iNumClients );
 
@@ -314,6 +324,8 @@ protected:
     void MixEncodeTransmitData ( const int iChanCnt,
                                  const int iNumClients );
 
+    void MixStream ( const int iNumClients );
+
     virtual void customEvent ( QEvent* pEvent );
 
     // if server mode is normal or double system frame size
@@ -321,8 +333,10 @@ protected:
     int                        iServerFrameSizeSamples;
 
     // variables needed for multithreading support
-    bool                      bUseMultithreading;
-    QFutureSynchronizer<void> FutureSynchronizer;
+    bool                       bUseMultithreading;
+    int                        iMaxNumThreads;
+    // QFutureSynchronizer<void>  FutureSynchronizer;
+    CVector<std::future<void>> Futures;
 
     bool CreateLevelsForAllConChannels  ( const int                        iNumClients,
                                           const CVector<int>&              vecNumAudioChannels,
@@ -381,6 +395,10 @@ protected:
     // HTML file server status
     bool                       bWriteStatusHTMLFile;
     QString                    strServerHTMLFileListName;
+    
+    // CSV file server status
+    bool                       bWriteStatusCSVFile;
+    QString                    strServerCSVFileListName;
 
     CHighPrecisionTimer        HighPrecisionTimer;
 
@@ -390,6 +408,9 @@ protected:
     // jam recorder
     recorder::CJamController   JamController;
     bool bDisableRecording;
+
+    // jam streamer
+    bool bStream = false;
 
     // GUI settings
     bool                       bAutoRunMinimized;
@@ -401,6 +422,8 @@ protected:
 
     CSignalHandler*            pSignalHandler;
 
+    std::unique_ptr<ThreadPool>tpThreadPool;
+
 signals:
     void Started();
     void Stopped();
@@ -411,6 +434,8 @@ signals:
                       const CHostAddress     RecHostAddr,
                       const int              iNumAudChan,
                       const CVector<int16_t> vecsData );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     void CLVersionAndOSReceived ( CHostAddress           InetAddr,
                                   COSUtil::EOpSystemType eOSType,
