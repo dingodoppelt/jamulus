@@ -922,6 +922,10 @@ if ( rand() < ( RAND_MAX / 2 ) ) return false;
     case PROTMESSID_CLM_REGISTER_SERVER_RESP:
         EvaluateCLRegisterServerResp ( InetAddr, vecbyMesBodyData );
         break;
+
+    case PROTMESSID_CLM_API_STREAMER:
+        EvaluateCLAPIStreamer ();
+        break;
     }
 }
 
@@ -2583,6 +2587,11 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     emit CLRegisterServerResp ( InetAddr, static_cast<ESvrRegResult> ( iSvrRegResult ) );
 
     return false; // no error
+}
+
+void CProtocol::EvaluateCLAPIStreamer ()
+{
+    emit CLAPIToggleStreamer();
 }
 
 /******************************************************************************\
