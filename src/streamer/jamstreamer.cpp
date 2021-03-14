@@ -23,15 +23,17 @@ void CJamStreamer::OnStarted() {
 }
 
 void CJamStreamer::OnStopped() {
-    pclose(pipeout);
-    bisRunning = false;
+    if ( bisRunning ) {
+        pclose(pipeout);
+        bisRunning = false;
+    }
 }
 
 void CJamStreamer::OnToggle() {
-    if ( bisRunning == false ) {
-        OnStarted();
-    } else {
+    if ( bisRunning ) {
         OnStopped();
+    } else {
+        OnStarted();
     }
 }
 #endif
