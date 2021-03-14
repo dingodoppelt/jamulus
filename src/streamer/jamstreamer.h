@@ -20,7 +20,7 @@ public slots:
 private:
     QString strStreamDest; // stream destination to pass to ffmpeg as output part of arguments
     FILE *pipeout; // pipe for putting out the pcm data to ffmpeg
-    bool bisRunning;
+    bool bisRunning = false;
 };
 }
 #endif
