@@ -374,6 +374,8 @@ CServer::CServer ( const int          iNewMaxNumChan,
         WriteHTMLChannelList();
     }
 
+    ChatBot.Init();
+
     // manage welcome message: if the welcome message is a valid link to a local
     // file, the content of that file is used as the welcome message (#361)
     SetWelcomeMessage ( strNewWelcomeMessage ); // first use given text, may be overwritten
@@ -451,6 +453,10 @@ CServer::CServer ( const int          iNewMaxNumChan,
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLVersionAndOSReceived, this, &CServer::CLVersionAndOSReceived );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLReqConnClientsList, this, &CServer::OnCLReqConnClientsList );
+
+    QObject::connect ( &ServerListManager, &CServerListManager::SvrRegStatusChanged, this, &CServer::SvrRegStatusChanged );
+
+    QObject::connect ( &ConnLessProtocol, &CProtocol::ChatTextReceived, &ChatBot, &chatbot::CChatBot::OnIntChatMessReceived );
 
     QObject::connect ( &ServerListManager, &CServerListManager::SvrRegStatusChanged, this, &CServer::SvrRegStatusChanged );
 
