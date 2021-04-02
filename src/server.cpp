@@ -386,8 +386,6 @@ CServer::CServer ( const int          iNewMaxNumChan,
         WriteHTMLChannelList();
     }
 
-    ChatBot.Init();
-
     // manage welcome message: if the welcome message is a valid link to a local
     // file, the content of that file is used as the welcome message (#361)
     SetWelcomeMessage ( strNewWelcomeMessage ); // first use given text, may be overwritten
@@ -466,8 +464,6 @@ CServer::CServer ( const int          iNewMaxNumChan,
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLVersionAndOSReceived, this, &CServer::CLVersionAndOSReceived );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLReqConnClientsList, this, &CServer::OnCLReqConnClientsList );
-
-    QObject::connect ( &ServerListManager, &CServerListManager::SvrRegStatusChanged, this, &CServer::SvrRegStatusChanged );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::ChatTextReceived, &ChatBot, &chatbot::CChatBot::OnIntChatMessReceived );
 
@@ -1439,8 +1435,18 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
     // use different colors
     QString sCurColor = vstrChatColors[iCurChanID % vstrChatColors.Size()];
 
+<<<<<<< HEAD
     const QString strActualMessageText = "<font color=\"" + sCurColor + "\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
                                          ChanName.toHtmlEscaped() + "</b></font> " + strChatText.toHtmlEscaped();
+=======
+    const QString strActualMessageText =
+        "<font color=\"" + sCurColor + "\">(" +
+        QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
+        ChanName.toHtmlEscaped() +
+        "</b></font> " + strChatText.toHtmlEscaped();
+
+    ChatBot.OnIntChatMessReceived(strActualMessageText);
+>>>>>>> put out server chat into fifo
 
     // Send chat text to all connected clients ---------------------------------
     for ( int i = 0; i < iMaxNumChannels; i++ )
