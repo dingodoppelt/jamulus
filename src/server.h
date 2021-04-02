@@ -45,6 +45,7 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "chatbot/chatbot.h"
 
 #include "threadpool.h"
 
@@ -391,6 +392,8 @@ protected:
     CSignalHandler* pSignalHandler;
 
     std::unique_ptr<CThreadPool> pThreadPool;
+
+    chatbot::CChatBot          ChatBot;
 
 signals:
     void Started();
