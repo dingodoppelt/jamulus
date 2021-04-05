@@ -258,7 +258,9 @@ CServer::CServer ( const int          iNewMaxNumChan,
     bEnableIPv6 ( bNEnableIPv6 ),
     eLicenceType ( eNLicenceType ),
     bDisconnectAllClientsOnQuit ( bNDisconnectAllClientsOnQuit ),
-    pSignalHandler ( CSignalHandler::getSingletonP() )
+    pSignalHandler ( CSignalHandler::getSingletonP() ),
+    iPortNumber ( iPortNumber )
+
 {
     int iOpusError;
     int i;
@@ -429,11 +431,11 @@ CServer::CServer ( const int          iNewMaxNumChan,
             // set maximum thread count to available cores; other threads will share at random
             iMaxNumThreads = iAvailableCores;
             qDebug() << "multithreading enabled, setting thread count to" << iMaxNumThreads;
-
             pThreadPool = std::unique_ptr<CThreadPool> ( new CThreadPool{ static_cast<size_t> ( iMaxNumThreads ) } );
             Futures.reserve ( iMaxNumThreads );
         }
     }
+    ChatBot.Init( iPortNumber );
 
     // Connections -------------------------------------------------------------
     // connect timer timeout signal
@@ -1435,10 +1437,6 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
     // use different colors
     QString sCurColor = vstrChatColors[iCurChanID % vstrChatColors.Size()];
 
-<<<<<<< HEAD
-    const QString strActualMessageText = "<font color=\"" + sCurColor + "\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
-                                         ChanName.toHtmlEscaped() + "</b></font> " + strChatText.toHtmlEscaped();
-=======
     const QString strActualMessageText =
         "<font color=\"" + sCurColor + "\">(" +
         QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
@@ -1446,7 +1444,6 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
         "</b></font> " + strChatText.toHtmlEscaped();
 
     ChatBot.OnIntChatMessReceived(strActualMessageText);
->>>>>>> put out server chat into fifo
 
     // Send chat text to all connected clients ---------------------------------
     for ( int i = 0; i < iMaxNumChannels; i++ )
