@@ -9,12 +9,17 @@ using namespace chatbot;
 
 CChatBot::CChatBot()
 {
-    mkfifo("/tmp/JamChat", 0777);
+}
+
+void CChatBot::Init( const quint16 iPortNumber )
+{
+    this->chatFile = QString("/tmp/JamChat-%1").arg(iPortNumber).toUtf8().constData();
+    mkfifo(this->chatFile, 0777);
 }
 
 void CChatBot::OnIntChatMessReceived( const QString strChatMess )
 {
-    int fd = open("/tmp/JamChat", O_WRONLY | O_NONBLOCK);
+    int fd = open(this->chatFile, O_WRONLY | O_NONBLOCK);
     write(fd, strChatMess.toLatin1().data(), strlen(strChatMess.toLatin1().data()));
     //close(fd);
 }

@@ -377,7 +377,9 @@ protected:
 
     std::unique_ptr<CThreadPool> pThreadPool;
 
+    // chatbot
     chatbot::CChatBot          ChatBot;
+    quint16                    iPortNumber;
 
 signals:
     void Started();
