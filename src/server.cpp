@@ -1448,7 +1448,8 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
         ChanName.toHtmlEscaped() +
         "</b></font> " + strChatText.toHtmlEscaped();
 
-    ChatBot.OnIntChatMessReceived(strActualMessageText);
+    // log internal chat message to fifo
+    ChatBot.OnIntChatMessReceived ( strActualMessageText );
 
     // Send chat text to all connected clients ---------------------------------
     for ( int i = 0; i < iMaxNumChannels; i++ )
@@ -1460,16 +1461,12 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
         }
     }
 }
+
 // external chat
 void CServer::CreateAndSendExtChatTextForAllConChannels ( const QString& strChatText )
 {
-    // Create message which is sent to all connected clients -------------------
-
-    const QString strActualMessageText = strChatText;
-       /* "<font color=\"hotpink\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
-        ChanName.toHtmlEscaped() +
-        "</b></font> " + strChatText.toHtmlEscaped();*/
-
+    // log external chat messsage to fifo
+    ChatBot.OnIntChatMessReceived ( strChatText );
 
     // Send chat text to all connected clients ---------------------------------
     for ( int i = 0; i < iMaxNumChannels; i++ )
@@ -1477,7 +1474,7 @@ void CServer::CreateAndSendExtChatTextForAllConChannels ( const QString& strChat
         if ( vecChannels[i].IsConnected() )
         {
             // send message
-            vecChannels[i].CreateChatTextMes ( strActualMessageText );
+            vecChannels[i].CreateChatTextMes ( strChatText );
         }
     }
 }
