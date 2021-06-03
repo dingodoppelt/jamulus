@@ -233,6 +233,7 @@ public:
     bool GetFraSiFactSafeSupported() { return bFraSiFactSafeSupported; }
 
     void SetMuteOutStream ( const bool bDoMute ) { bMuteOutStream = bDoMute; }
+    bool GetMuteOutStream() { return bMuteOutStream; }
 
     void SetRemoteChanGain ( const int iId, const float fGain, const bool bIsMyOwnFader );
 
