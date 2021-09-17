@@ -76,6 +76,7 @@ extern void qt_set_sequence_auto_mnemonic ( bool bEnable );
 #        include "clientrpc.h"
 #    endif
 #endif
+#include "stereomixserver.h"
 
 // Implementation **************************************************************
 
@@ -123,6 +124,7 @@ int main ( int argc, char** argv )
     quint16      iPortNumber                 = DEFAULT_PORT_NUMBER;
     int          iJsonRpcPortNumber          = INVALID_PORT;
     QString      strJsonRpcBindIP            = DEFAULT_JSON_RPC_LISTEN_ADDRESS;
+    int          iStereoMixPortNumber        = INVALID_PORT;
     quint16      iQosNumber                  = DEFAULT_QOS_NUMBER;
     ELicenceType eLicenceType                = LT_NO_LICENCE;
     QString      strConnOnStartupAddress     = "";
@@ -238,6 +240,15 @@ int main ( int argc, char** argv )
             strJsonRpcBindIP = QString ( strArgument );
             qInfo() << qUtf8Printable ( QString ( "- JSON-RPC will bind to: %1 if enabled" ).arg ( strJsonRpcBindIP ) );
             CommandLineOptions << "--jsonrpcbindip";
+            continue;
+        }
+
+        // Stereo mix port number ----------------------------------------------
+        if ( GetNumericArgument ( argc, argv, i, "--stereomixport", "--stereomixport", 0, 65535, rDbleArgument ) )
+        {
+            iStereoMixPortNumber = static_cast<quint16> ( rDbleArgument );
+            qInfo() << qUtf8Printable ( QString ( "- stereo mix port number: %1" ).arg ( iStereoMixPortNumber ) );
+            CommandLineOptions << "--stereomixport";
             continue;
         }
 
@@ -1062,6 +1073,12 @@ int main ( int argc, char** argv )
             }
 
 #endif
+            if ( iStereoMixPortNumber != INVALID_PORT )
+            {
+                auto pStereoMixServer = new CStereoMixServer ( &Server, iStereoMixPortNumber );
+                pStereoMixServer->Start();
+            }
+
 #ifndef HEADLESS
             if ( bUseGUI )
             {
@@ -1179,6 +1196,9 @@ QString UsageArguments ( char** argv )
            "  -s, --server            start Server\n"
            "      --serverbindip4     IPv4 address the Server will bind to (rather than all)\n"
            "      --serverbindip6     IPv6 address the Server will bind to (rather than all)\n"
+           "      --stereomixport     enable Stereo Mix server which streams PCM samples\n"
+           "                          at 48000 Hz in s16le stereo format, set TCP port number\n"
+           "                          (only accessible from localhost)\n"
            "  -T, --multithreading    use multithreading to make better use of\n"
            "                          multi-core CPUs and support more Clients\n"
            "  -u, --numchannels       maximum number of channels\n"
