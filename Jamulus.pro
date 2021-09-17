@@ -397,6 +397,7 @@ HEADERS += src/plugins/audioreverb.h \
     src/server.h \
     src/serverlist.h \
     src/serverlogging.h \
+    src/stereomixserver.h \
     src/settings.h \
     src/socket.h \
     src/util.h \
@@ -504,6 +505,7 @@ SOURCES += src/plugins/audioreverb.cpp \
     src/server.cpp \
     src/serverlist.cpp \
     src/serverlogging.cpp \
+    src/stereomixserver.cpp \
     src/settings.cpp \
     src/signalhandler.cpp \
     src/socket.cpp \
