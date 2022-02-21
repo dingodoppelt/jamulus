@@ -85,6 +85,9 @@
 #define PROTMESSID_CLM_RED_SERVER_LIST        1018 // reduced server list
 #define PROTMESSID_CLM_EXT_CHAT_TEXT          1019 // external chat text
 
+// API IDs
+#define PROTMESSID_CLM_API_STREAMER           1501 // start/stop/restart stream
+
 // special IDs
 #define PROTMESSID_SPECIAL_SPLIT_MESSAGE 2001 // a container for split messages
 
@@ -270,6 +273,9 @@ protected:
     bool EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLExtChatText           ( const CVector<uint8_t>& vecData );
 
+    // streamer API
+    void EvaluateCLAPIStreamer();
+
     int iOldRecID;
     int iOldRecCnt;
 
@@ -314,7 +320,6 @@ signals:
     void LicenceRequired ( ELicenceType eLicenceType );
     void VersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString strVersion );
     void RecorderStateReceived ( ERecorderState eRecorderState );
-
     void CLPingReceived ( CHostAddress InetAddr, int iMs );
     void CLPingWithNumClientsReceived ( CHostAddress InetAddr, int iMs, int iNumClients );
     void CLRegisterServerReceived ( CHostAddress InetAddr, CHostAddress LInetAddr, CServerCoreInfo ServerInfo );
@@ -335,6 +340,8 @@ signals:
     void CLReqConnClientsList ( CHostAddress InetAddr );
     void CLChannelLevelListReceived ( CHostAddress InetAddr, CVector<uint16_t> vecLevelList );
     void CLRegisterServerResp ( CHostAddress InetAddr, ESvrRegResult eStatus );
+
     // external chat
     void CLExtChatMessReceived        ( QString                strExtChatText );
+    void CLAPIToggleStreamer();
 };

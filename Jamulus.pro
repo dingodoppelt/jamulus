@@ -445,7 +445,8 @@ HEADERS += src/buffer.h \
     src/recorder/creaperproject.h \
     src/recorder/cwavestream.h \
     src/signalhandler.h \
-    src/chatbot/chatbot.h
+    src/chatbot/chatbot.h \
+    src/streamer/jamstreamer.h
 
 HEADERS_GUI = src/audiomixerboard.h \
     src/chatdlg.h \
@@ -546,7 +547,8 @@ SOURCES += src/buffer.cpp \
     src/recorder/jamrecorder.cpp \
     src/recorder/creaperproject.cpp \
     src/recorder/cwavestream.cpp \
-    src/chatbot/chatbot.cpp
+    src/chatbot/chatbot.cpp \
+    src/streamer/jamstreamer.cpp
 
 SOURCES_GUI = src/audiomixerboard.cpp \
     src/chatdlg.cpp \

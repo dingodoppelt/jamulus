@@ -926,6 +926,10 @@ if ( rand() < ( RAND_MAX / 2 ) ) return false;
     case PROTMESSID_CLM_EXT_CHAT_TEXT:
         EvaluateCLExtChatText ( vecbyMesBodyData );
         break;
+
+    case PROTMESSID_CLM_API_STREAMER:
+        EvaluateCLAPIStreamer ();
+        break;
     }
 }
 
@@ -2589,6 +2593,7 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     return false; // no error
 }
 
+<<<<<<< HEAD
 // external chat
 bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
 
@@ -2613,7 +2618,12 @@ bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
     // invoke message action
     emit CLExtChatMessReceived ( strChatText );
 
-    return false; // no error 
+    return false; // no error
+}
+
+void CProtocol::EvaluateCLAPIStreamer ()
+{
+    emit CLAPIToggleStreamer();
 }
 
 /******************************************************************************\
