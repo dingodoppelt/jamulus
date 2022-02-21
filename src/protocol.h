@@ -268,7 +268,6 @@ protected:
     bool EvaluateCLPingMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLPingWithNumClientsMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLServerFullMes();
-<<<<<<< HEAD
     bool EvaluateCLRegisterServerMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLRegisterServerExMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData );
     bool EvaluateCLUnregisterServerMes ( const CHostAddress& InetAddr );
@@ -330,8 +329,6 @@ signals:
     void LicenceRequired ( ELicenceType eLicenceType );
     void VersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString strVersion );
     void RecorderStateReceived ( ERecorderState eRecorderState );
-
-<<<<<<< HEAD
     void CLPingReceived ( CHostAddress InetAddr, int iMs );
     void CLPingWithNumClientsReceived ( CHostAddress InetAddr, int iMs, int iNumClients );
     void CLRegisterServerReceived ( CHostAddress InetAddr, CHostAddress LInetAddr, CServerCoreInfo ServerInfo );
@@ -352,39 +349,5 @@ signals:
     void CLReqConnClientsList ( CHostAddress InetAddr );
     void CLChannelLevelListReceived ( CHostAddress InetAddr, CVector<uint16_t> vecLevelList );
     void CLRegisterServerResp ( CHostAddress InetAddr, ESvrRegResult eStatus );
-=======
-    void CLPingReceived               ( CHostAddress           InetAddr,
-                                        int                    iMs );
-    void CLPingWithNumClientsReceived ( CHostAddress           InetAddr,
-                                        int                    iMs,
-                                        int                    iNumClients );
-    void CLRegisterServerReceived     ( CHostAddress           InetAddr,
-                                        CHostAddress           LInetAddr,
-                                        CServerCoreInfo        ServerInfo );
-    void CLRegisterServerExReceived   ( CHostAddress           InetAddr,
-                                        CHostAddress           LInetAddr,
-                                        CServerCoreInfo        ServerInfo,
-                                        COSUtil::EOpSystemType eOSType,
-                                        QString                strVersion );
-    void CLUnregisterServerReceived   ( CHostAddress           InetAddr );
-    void CLServerListReceived         ( CHostAddress           InetAddr,
-                                        CVector<CServerInfo>   vecServerInfo );
-    void CLRedServerListReceived      ( CHostAddress           InetAddr,
-                                        CVector<CServerInfo>   vecServerInfo );
-    void CLReqServerList              ( CHostAddress           InetAddr );
-    void CLSendEmptyMes               ( CHostAddress           TargetInetAddr );
-    void CLDisconnection              ( CHostAddress           InetAddr );
-    void CLVersionAndOSReceived       ( CHostAddress           InetAddr,
-                                        COSUtil::EOpSystemType eOSType,
-                                        QString                strVersion );
-    void CLReqVersionAndOS            ( CHostAddress           InetAddr );
-    void CLConnClientsListMesReceived ( CHostAddress           InetAddr,
-                                        CVector<CChannelInfo>  vecChanInfo );
-    void CLReqConnClientsList         ( CHostAddress           InetAddr );
-    void CLChannelLevelListReceived   ( CHostAddress           InetAddr,
-                                        CVector<uint16_t>      vecLevelList );
-    void CLRegisterServerResp         ( CHostAddress           InetAddr,
-                                        ESvrRegResult          eStatus );
     void CLAPIToggleStreamer();
->>>>>>> add protocol message, signal and slot to toggle streamer
 };
