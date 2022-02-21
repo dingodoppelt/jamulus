@@ -820,9 +820,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
             // we pad to a total of 8 characters with zeros to make sure the
             // sorting is done correctly
             pCurListViewItem->setText ( 4, QString ( "%1" ).arg ( iPingTime, 8, 10, QLatin1Char ( '0' ) ) );
-
-            // update the sorting (lowest number on top)
-            bDoSorting = true;
         }
 
         // for debugging it is good to see the current ping time in the list
