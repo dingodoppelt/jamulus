@@ -22,6 +22,6 @@ void CChatBot::Init( const quint16 iPortNumber )
 void CChatBot::OnIntChatMessReceived( const QString strChatMess )
 {
     int fd = open(chatFile, O_WRONLY | O_NONBLOCK);
-    write(fd, strChatMess.toLatin1().data(), strlen(strChatMess.toLatin1().data()));
+    write(fd, strChatMess.toUtf8().data(), strlen(strChatMess.toUtf8().data()));
     //close(fd);
 }
