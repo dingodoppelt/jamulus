@@ -2593,7 +2593,6 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     return false; // no error
 }
 
-<<<<<<< HEAD
 // external chat
 bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
 
