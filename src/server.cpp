@@ -261,7 +261,9 @@ CServer::CServer ( const int          iNewMaxNumChan,
     bEnableIPv6 ( bNEnableIPv6 ),
     eLicenceType ( eNLicenceType ),
     bDisconnectAllClientsOnQuit ( bNDisconnectAllClientsOnQuit ),
-    pSignalHandler ( CSignalHandler::getSingletonP() )
+    pSignalHandler ( CSignalHandler::getSingletonP() ),
+    iPortNumber ( iPortNumber )
+
 {
     int iOpusError;
     int i;
@@ -440,11 +442,11 @@ CServer::CServer ( const int          iNewMaxNumChan,
             // set maximum thread count to available cores; other threads will share at random
             iMaxNumThreads = iAvailableCores;
             qDebug() << "multithreading enabled, setting thread count to" << iMaxNumThreads;
-
             pThreadPool = std::unique_ptr<CThreadPool> ( new CThreadPool{ static_cast<size_t> ( iMaxNumThreads ) } );
             Futures.reserve ( iMaxNumThreads );
         }
     }
+    ChatBot.Init( iPortNumber );
 
     // Connections -------------------------------------------------------------
     // connect timer timeout signal
@@ -468,6 +470,11 @@ CServer::CServer ( const int          iNewMaxNumChan,
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLSendEmptyMes, this, &CServer::OnCLSendEmptyMes );
 
+    // external chat
+    QObject::connect ( &ConnLessProtocol, &CProtocol::CLExtChatMessReceived, this, &CServer::OnCLExtChatMessReceived );
+
+    QObject::connect ( &ConnLessProtocol, &CProtocol::CLSendEmptyMes, this, &CServer::OnCLSendEmptyMes );
+
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLDisconnection, this, &CServer::OnCLDisconnection );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLReqVersionAndOS, this, &CServer::OnCLReqVersionAndOS );
@@ -475,6 +482,8 @@ CServer::CServer ( const int          iNewMaxNumChan,
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLVersionAndOSReceived, this, &CServer::CLVersionAndOSReceived );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLReqConnClientsList, this, &CServer::OnCLReqConnClientsList );
+
+    QObject::connect ( &ConnLessProtocol, &CProtocol::ChatTextReceived, &ChatBot, &chatbot::CChatBot::OnIntChatMessReceived );
 
     QObject::connect ( &ServerListManager, &CServerListManager::SvrRegStatusChanged, this, &CServer::SvrRegStatusChanged );
 
@@ -1449,8 +1458,14 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
     // use different colors
     QString sCurColor = vstrChatColors[iCurChanID % vstrChatColors.Size()];
 
-    const QString strActualMessageText = "<font color=\"" + sCurColor + "\">(" + QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
-                                         ChanName.toHtmlEscaped() + "</b></font> " + strChatText.toHtmlEscaped();
+    const QString strActualMessageText =
+        "<font color=\"" + sCurColor + "\">(" +
+        QTime::currentTime().toString ( "hh:mm:ss AP" ) + ") <b>" +
+        ChanName.toHtmlEscaped() +
+        "</b></font> " + strChatText.toHtmlEscaped();
+
+    // log internal chat message to fifo
+    ChatBot.OnIntChatMessReceived ( strActualMessageText );
 
     // Send chat text to all connected clients ---------------------------------
     for ( int i = 0; i < iMaxNumChannels; i++ )
@@ -1459,6 +1474,23 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
         {
             // send message
             vecChannels[i].CreateChatTextMes ( strActualMessageText );
+        }
+    }
+}
+
+// external chat
+void CServer::CreateAndSendExtChatTextForAllConChannels ( const QString& strChatText )
+{
+    // log external chat messsage to fifo
+    ChatBot.OnIntChatMessReceived ( strChatText );
+
+    // Send chat text to all connected clients ---------------------------------
+    for ( int i = 0; i < iMaxNumChannels; i++ )
+    {
+        if ( vecChannels[i].IsConnected() )
+        {
+            // send message
+            vecChannels[i].CreateChatTextMes ( strChatText );
         }
     }
 }

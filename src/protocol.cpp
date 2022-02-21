@@ -922,6 +922,10 @@ if ( rand() < ( RAND_MAX / 2 ) ) return false;
     case PROTMESSID_CLM_REGISTER_SERVER_RESP:
         EvaluateCLRegisterServerResp ( InetAddr, vecbyMesBodyData );
         break;
+
+    case PROTMESSID_CLM_EXT_CHAT_TEXT:
+        EvaluateCLExtChatText ( vecbyMesBodyData );
+        break;
     }
 }
 
@@ -2583,6 +2587,33 @@ bool CProtocol::EvaluateCLRegisterServerResp ( const CHostAddress& InetAddr, con
     emit CLRegisterServerResp ( InetAddr, static_cast<ESvrRegResult> ( iSvrRegResult ) );
 
     return false; // no error
+}
+
+// external chat
+bool CProtocol::EvaluateCLExtChatText ( const CVector<uint8_t>& vecData )
+
+{
+    int iPos = 0; // init position pointer
+
+    // chat text
+    QString strChatText;
+    if ( GetStringFromStream ( vecData,
+                               iPos,
+                               MAX_LEN_CHAT_TEXT_PLUS_HTML,
+                               strChatText ) )
+    {
+        return true; // return error code
+    }
+
+    // check size: all data is read, the position must now be at the end
+    if ( iPos != vecData.Size() )
+    {
+        return true; // return error code
+    }
+    // invoke message action
+    emit CLExtChatMessReceived ( strChatText );
+
+    return false; // no error 
 }
 
 /******************************************************************************\
