@@ -34,6 +34,16 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         Q_UNUSED ( params );
     } );
 
+    /// @rpc_notification jamulusserver/clientConnected
+    /// @brief Emitted when a client has connected to the server.
+    /// @param {number} params.id - The channel ID assigned to the client.
+    connect ( pServer, &CServer::ClientConnected, [=] ( int iChanID ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/clientConnected",
+                                            QJsonObject{
+                                                { "id", iChanID },
+                                            } );
+    } );
+
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).
