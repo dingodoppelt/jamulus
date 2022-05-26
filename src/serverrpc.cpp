@@ -46,6 +46,16 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
                                             } );
     } );
 
+    /// @rpc_notification jamulusserver/clientDisconnected
+    /// @brief Emitted when a client has disconnected from the server.
+    /// @param {number} params.id - The channel ID assigned to the client.
+    connect ( pServer, &CServer::ClientDisconnected, [=] ( const int iChanID ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/clientDisconnected",
+                                            QJsonObject{
+                                                { "id", iChanID },
+                                            } );
+    } );
+
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).
