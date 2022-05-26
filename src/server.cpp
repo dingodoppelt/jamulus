@@ -638,7 +638,7 @@ void CServer::OnNewConnection ( int iChID, int iTotChans, CHostAddress RecHostAd
     // logging of new connected channel
     Logging.AddNewConnection ( RecHostAddr.InetAddr, iTotChans );
 
-    emit ClientConnected ( iChID );
+    emit ClientConnected ( iChID, RecHostAddr.InetAddr, iTotChans );
 }
 
 void CServer::OnServerFull ( CHostAddress RecHostAddr )
