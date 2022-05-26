@@ -127,10 +127,10 @@ public:
     void CreateLicenceRequiredMes ( const ELicenceType eLicenceType );
     void CreateOpusSupportedMes();
 
-    // clang-format off
-// TODO needed for compatibility to old servers >= 3.4.6 and <= 3.5.12
-void CreateReqChannelLevelListMes();
-    // clang-format on
+    //### TODO: BEGIN ###//
+    // needed for compatibility to old servers >= 3.4.6 and <= 3.5.12
+    void CreateReqChannelLevelListMes();
+    //### TODO: END ###//
 
     void CreateVersionAndOSMes();
     void CreateRecorderStateMes ( const ERecorderState eRecorderState );
@@ -217,6 +217,8 @@ protected:
                                  const QByteArray& sStringUTF8,
                                  const int         iNumberOfBytsLen = 2 ); // default is 2 bytes length indicator
 
+    void PutCountryOnStream ( CVector<uint8_t>& vecIn, int& iPos, QLocale::Country eCountry );
+
     static uint32_t GetValFromStream ( const CVector<uint8_t>& vecIn, int& iPos, const int iNumOfBytes );
 
     bool GetStringFromStream ( const CVector<uint8_t>& vecIn,
@@ -224,6 +226,8 @@ protected:
                                const int               iMaxStringLen,
                                QString&                strOut,
                                const int               iNumberOfBytsLen = 2 ); // default is 2 bytes length indicator
+
+    static QLocale::Country GetCountryFromStream ( const CVector<uint8_t>& vecIn, int& iPos );
 
     void SendMessage();
 

@@ -561,21 +561,31 @@ CClientSettingsDlg::CClientSettingsDlg ( CClient* pNCliP, CClientSettings* pNSet
     for ( int iCurCntry = static_cast<int> ( QLocale::AnyCountry ); iCurCntry < static_cast<int> ( QLocale::LastCountry ); iCurCntry++ )
     {
         // exclude the "None" entry since it is added after the sorting
-        if ( static_cast<QLocale::Country> ( iCurCntry ) != QLocale::AnyCountry )
+        if ( static_cast<QLocale::Country> ( iCurCntry ) == QLocale::AnyCountry )
         {
-            // get current country enum
-            QLocale::Country eCountry = static_cast<QLocale::Country> ( iCurCntry );
+            continue;
+        }
 
-            // try to load icon from resource file name
-            QIcon CurFlagIcon;
-            CurFlagIcon.addFile ( CLocale::GetCountryFlagIconsResourceReference ( eCountry ) );
+        if ( !CLocale::IsCountryCodeSupported ( iCurCntry ) )
+        {
+            // The current Qt version which is the base for the loop may support
+            // more country codes than our protocol does. Therefore, skip
+            // the unsupported options to avoid surprises.
+            continue;
+        }
 
-            // only add the entry if a flag is available
-            if ( !CurFlagIcon.isNull() )
-            {
-                // create a combo box item with text and image
-                pcbxCountry->addItem ( QIcon ( CurFlagIcon ), QLocale::countryToString ( eCountry ), iCurCntry );
-            }
+        // get current country enum
+        QLocale::Country eCountry = static_cast<QLocale::Country> ( iCurCntry );
+
+        // try to load icon from resource file name
+        QIcon CurFlagIcon;
+        CurFlagIcon.addFile ( CLocale::GetCountryFlagIconsResourceReference ( eCountry ) );
+
+        // only add the entry if a flag is available
+        if ( !CurFlagIcon.isNull() )
+        {
+            // create a combo box item with text and image
+            pcbxCountry->addItem ( QIcon ( CurFlagIcon ), QLocale::countryToString ( eCountry ), iCurCntry );
         }
     }
 
@@ -842,7 +852,6 @@ void CClientSettingsDlg::UpdateSoundDeviceChannelSelectionFrame()
 
     // update input/output channel selection
 #if defined( _WIN32 ) || defined( __APPLE__ ) || defined( __MACOSX )
-    int iSndChanIdx;
 
     // Definition: The channel selection frame shall only be visible,
     // if more than two input or output channels are available
@@ -862,7 +871,8 @@ void CClientSettingsDlg::UpdateSoundDeviceChannelSelectionFrame()
         // input
         cbxLInChan->clear();
         cbxRInChan->clear();
-        for ( iSndChanIdx = 0; iSndChanIdx < pClient->GetSndCrdNumInputChannels(); iSndChanIdx++ )
+
+        for ( int iSndChanIdx = 0; iSndChanIdx < pClient->GetSndCrdNumInputChannels(); iSndChanIdx++ )
         {
             cbxLInChan->addItem ( pClient->GetSndCrdInputChannelName ( iSndChanIdx ) );
             cbxRInChan->addItem ( pClient->GetSndCrdInputChannelName ( iSndChanIdx ) );
@@ -876,7 +886,7 @@ void CClientSettingsDlg::UpdateSoundDeviceChannelSelectionFrame()
         // output
         cbxLOutChan->clear();
         cbxROutChan->clear();
-        for ( iSndChanIdx = 0; iSndChanIdx < pClient->GetSndCrdNumOutputChannels(); iSndChanIdx++ )
+        for ( int iSndChanIdx = 0; iSndChanIdx < pClient->GetSndCrdNumOutputChannels(); iSndChanIdx++ )
         {
             cbxLOutChan->addItem ( pClient->GetSndCrdOutputChannelName ( iSndChanIdx ) );
             cbxROutChan->addItem ( pClient->GetSndCrdOutputChannelName ( iSndChanIdx ) );

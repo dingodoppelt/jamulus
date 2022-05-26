@@ -359,11 +359,11 @@ QMap<QString, QList<STrackItem>> CJamSession::TracksFromSessionDir ( const QStri
 /**
  * @brief CJamRecorder::Init Create recording directory, if necessary, and connect signal handlers
  * @param server Server object emitting signals
- * @return QString::null on success else the failure reason
+ * @return QString() on success else the failure reason
  */
 QString CJamRecorder::Init()
 {
-    QString   errmsg = QString::null;
+    QString   errmsg = QString();
     QFileInfo fi ( recordBaseDir.absolutePath() );
     fi.setCaching ( false );
 
@@ -479,7 +479,7 @@ void CJamRecorder::ReaperProjectFromCurrentSession()
         if ( outf.open ( QFile::WriteOnly ) )
         {
             QTextStream out ( &outf );
-            out << CReaperProject ( currentSession->Tracks(), iServerFrameSizeSamples ).toString() << endl;
+            out << CReaperProject ( currentSession->Tracks(), iServerFrameSizeSamples ).toString() << '\n';
             qDebug() << "Session RPP:" << reaperProjectFileName;
         }
         else
@@ -511,7 +511,7 @@ void CJamRecorder::AudacityLofFromCurrentSession()
                 {
                     QFileInfo fi ( item.fileName );
                     sOut << "file " << '"' << fi.fileName() << '"';
-                    sOut << " offset " << secondsAt48K ( item.startFrame, iServerFrameSizeSamples ) << endl;
+                    sOut << " offset " << secondsAt48K ( item.startFrame, iServerFrameSizeSamples ) << '\n';
                 }
             }
 
@@ -556,7 +556,7 @@ void CJamRecorder::SessionDirToReaper ( QString& strSessionDirName, int serverFr
 
     out << CReaperProject ( CJamSession::TracksFromSessionDir ( fiSessionDir.absoluteFilePath(), serverFrameSizeSamples ), serverFrameSizeSamples )
                .toString()
-        << endl;
+        << '\n';
 
     qDebug() << "Session RPP:" << reaperProjectFileName;
 }

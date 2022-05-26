@@ -205,8 +205,7 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     lblDelayVal->setWhatsThis ( strConnStats );
     ledDelay->setWhatsThis ( strConnStats );
     ledDelay->setToolTip ( tr ( "If this LED indicator turns red, "
-                                "you will not have much fun using "
-                                "the %1 software." )
+                                "you will not have much fun using %1." )
                                .arg ( APP_NAME ) +
                            TOOLTIP_COM_END_TEXT );
     lblPingVal->setText ( "---" );
@@ -963,19 +962,16 @@ void CClientDlg::SetMyWindowTitle ( const int iClients )
 #if defined( Q_OS_MACX )
     // for MacOS only we show the number of connected clients as a
     // badge label text if more than one user is connected
-    // (only available in Qt5.2)
-#    if QT_VERSION >= QT_VERSION_CHECK( 5, 2, 0 )
     if ( iNumClients > 1 )
     {
         // show the number of connected clients
-        QtMac::setBadgeLabelText ( QString ( "%1" ).arg ( iNumClients ) );
+        SetMacBadgeLabelText ( QString ( "%1" ).arg ( iNumClients ) );
     }
     else
     {
         // clear the text (apply an empty string)
-        QtMac::setBadgeLabelText ( "" );
+        SetMacBadgeLabelText ( "" );
     }
-#    endif
 #endif
 }
 
@@ -1296,11 +1292,11 @@ void CClientDlg::Disconnect()
     TimerDetectFeedback.stop();
     bDetectFeedback = false;
 
-    // clang-format off
-// TODO is this still required???
-// immediately update status bar
-OnTimerStatus();
-    // clang-format on
+    //### TODO: BEGIN ###//
+    // is this still required???
+    // immediately update status bar
+    OnTimerStatus();
+    //### TODO: END ###//
 
     // reset LEDs
     ledBuffers->Reset();
