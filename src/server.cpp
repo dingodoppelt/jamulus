@@ -1538,6 +1538,68 @@ void CServer::SetWelcomeMessage ( const QString& strNWelcMess )
     strWelcomeMessage = strWelcomeMessage.left ( MAX_LEN_CHAT_TEXT );
 }
 
+void CServer::GetCompleteClientInfos ( CVector<CHostAddress>& vecHostAddresses,
+                               CVector<QString>&      vecsName,
+                               CVector<QString>&      vecsCity,
+                               CVector<QString>&      vecsCountry,
+                               CVector<QString>&      vecsInstr,
+                               CVector<QString>&      vecsInstrPic,
+                               CVector<QString>&      vecsSkill,
+                               CVector<int>&          veciJitBufNumFrames,
+                               CVector<int>&          veciNetwFrameSizeFact )
+{
+    // init return values
+    vecHostAddresses.Init ( iMaxNumChannels );
+    vecsName.Init ( iMaxNumChannels );
+    vecsCity.Init ( iMaxNumChannels );
+    vecsCountry.Init ( iMaxNumChannels );
+    vecsInstr.Init ( iMaxNumChannels );
+    vecsInstrPic.Init ( iMaxNumChannels );
+    vecsSkill.Init ( iMaxNumChannels );
+    veciJitBufNumFrames.Init ( iMaxNumChannels );
+    veciNetwFrameSizeFact.Init ( iMaxNumChannels );
+
+    // check all possible channels
+    for ( int i = 0; i < iMaxNumChannels; i++ )
+    {
+        if ( vecChannels[i].IsConnected() )
+        {
+            // get requested data
+            vecHostAddresses[i]      = vecChannels[i].GetAddress();
+            vecsName[i]              = vecChannels[i].GetName();
+            vecsCity[i]              = vecChannels[i].GetChanInfo().strCity;
+            vecsCountry[i]           = QLocale::countryToString(vecChannels[i].GetChanInfo().eCountry);
+            vecsInstr[i]             = CInstPictures::GetName(vecChannels[i].GetChanInfo().iInstrument);
+            vecsInstrPic[i]          = CInstPictures::GetResourceReference(vecChannels[i].GetChanInfo().iInstrument);
+            vecsSkill[i]             = "";
+            veciJitBufNumFrames[i]   = vecChannels[i].GetSockBufNumFrames();
+            veciNetwFrameSizeFact[i] = vecChannels[i].GetNetwFrameSizeFact();
+            switch ( vecChannels[i].GetChanInfo().eSkillLevel )
+            {
+                case SL_BEGINNER:
+                    vecsSkill[i] = "\"Beginner\"";
+                    break;
+
+                case SL_INTERMEDIATE:
+                    vecsSkill[i] = "\"Intermediate\"";
+                    break;
+
+                case SL_PROFESSIONAL:
+                    vecsSkill[i] = "\"Expert\"";
+                    break;
+
+                case SL_NOT_SET:
+                    vecsSkill[i] = "";
+                    break;
+
+                default:
+                    vecsSkill[i] = "";
+                    break;
+            }
+        }
+    }
+}
+
 void CServer::WriteHTMLChannelList()
 {
     // prepare file and stream
