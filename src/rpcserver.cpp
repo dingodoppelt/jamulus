@@ -202,6 +202,20 @@ void CRpcServer::HandleApiAuth ( QTcpSocket* pSocket, const QJsonObject& params,
 
 void CRpcServer::HandleMethod ( const QString& strMethod, CRpcHandler pHandler ) { mapMethodHandlers[strMethod] = pHandler; }
 
+QJsonObject CRpcServer::getAvailableMethods() {
+    QJsonArray methods;
+    QMapIterator<QString, CRpcHandler> i ( mapMethodHandlers );
+
+    while (i.hasNext()) {
+        i.next();
+        methods.append(i.key());
+    }
+    QJsonObject result {
+        { "methods" , methods },
+    };
+    return result;
+}
+
 void CRpcServer::ProcessMessage ( QTcpSocket* pSocket, QJsonObject message, QJsonObject& response )
 {
     if ( !message["method"].isString() )

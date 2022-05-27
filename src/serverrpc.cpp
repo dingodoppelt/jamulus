@@ -103,6 +103,16 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         Q_UNUSED ( params );
     } );
 
+    /// @rpc_method jamulusserver/getAvailableMethods
+    /// @brief Returns all available rpc methods available at the server.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {array} result.methods - All available methods.
+    pRpcServer->HandleMethod ( "jamulusserver/getAvailableMethods", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonObject result = pRpcServer->getAvailableMethods();
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
+
     /// @rpc_method jamulusserver/getCompleteClientInfo
     /// @brief Returns the list of connected clients along with complete details about them.
     /// @param {object} params - No parameters (empty object).
