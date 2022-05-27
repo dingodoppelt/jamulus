@@ -37,6 +37,8 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
     /// @rpc_notification jamulusserver/clientConnected
     /// @brief Emitted when a client has connected to the server.
     /// @param {number} params.id - The channel ID assigned to the client.
+    /// @param {string} params.id - The client's address.
+    /// @param {number} params.id - Number of total channels connected to the server.
     connect ( pServer, &CServer::ClientConnected, [=] ( const int iChanID, const QHostAddress RecHostAddr, const int iTotChans ) {
         pRpcServer->BroadcastNotification ( "jamulusserver/clientConnected",
                                             QJsonObject{
@@ -56,9 +58,9 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
                                             } );
     } );
 
-    /// @rpc_notification jamulusserver/chatMessage
+    /// @rpc_notification jamulusserver/chatMessageReceived
     /// @brief Emitted when a chat message is received.
-    /// @param {number} params.strChatText - Chat message text.
+    /// @param {string} params.strChatText - Chat message text.
     connect ( pServer, &CServer::receivedChatMessage, [=] ( const QString& strChatText ) {
         pRpcServer->BroadcastNotification ( "jamulusserver/chatMessageReceived",
                                             QJsonObject{
@@ -66,9 +68,9 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
                                             } );
     } );
 
-    /// @rpc_method jamulusserver/sendChatMessage
+    /// @rpc_method jamulusserver/broadcastChatMessage
     /// @brief Sends a chat message to all connected clients.
-    /// @param {string} params.serverName - The chat message text.
+    /// @param {string} params.chatMessage - The chat message text.
     /// @result {string} result - Always "ok".
     pRpcServer->HandleMethod ( "jamulusserver/broadcastChatMessage", [=] ( const QJsonObject& params, QJsonObject& response ) {
         auto jsonChatMessage = params["chatMessage"];
