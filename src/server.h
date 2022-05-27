@@ -168,6 +168,7 @@ public:
 
     void SetEnableDelayPanning ( bool bDelayPanningOn ) { bDelayPan = bDelayPanningOn; }
     bool IsDelayPanningEnabled() { return bDelayPan; }
+    virtual void CreateAndSendChatTextForAllConChannels ( const QString& strChatText );
 
 protected:
     // access functions for actual channels
@@ -313,6 +314,7 @@ signals:
     void Stopped();
     void ClientDisconnected ( const int iChID );
     void ClientConnected ( const int iChID, const QHostAddress RecHostAddr, const int iTotChans );
+    void receivedChatMessage ( const QString& strChatText );
     void SvrRegStatusChanged();
     void AudioFrame ( const int              iChID,
                       const QString          stChName,

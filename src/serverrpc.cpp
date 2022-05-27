@@ -56,6 +56,32 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
                                             } );
     } );
 
+    /// @rpc_notification jamulusserver/chatMessage
+    /// @brief Emitted when a chat message is received.
+    /// @param {number} params.strChatText - Chat message text.
+    connect ( pServer, &CServer::receivedChatMessage, [=] ( const QString& strChatText ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/chatMessageReceived",
+                                            QJsonObject{
+                                                { "chatMessage", strChatText },
+                                            } );
+    } );
+
+    /// @rpc_method jamulusserver/sendChatMessage
+    /// @brief Sends a chat message to all connected clients.
+    /// @param {string} params.serverName - The chat message text.
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/broadcastChatMessage", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        auto jsonChatMessage = params["chatMessage"];
+        if ( !jsonChatMessage.isString() )
+        {
+            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatMessage is not a string" );
+            return;
+        }
+
+        pServer->CreateAndSendChatTextForAllConChannels ( jsonChatMessage.toString() );
+        response["result"] = "ok";
+    } );
+
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).
