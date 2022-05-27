@@ -37,8 +37,8 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
     /// @rpc_notification jamulusserver/clientConnected
     /// @brief Emitted when a client has connected to the server.
     /// @param {number} params.id - The channel ID assigned to the client.
-    /// @param {string} params.id - The client's address.
-    /// @param {number} params.id - Number of total channels connected to the server.
+    /// @param {string} params.address - The client's address.
+    /// @param {number} params.totalChannels - Number of total channels connected to the server.
     connect ( pServer, &CServer::ClientConnected, [=] ( const int iChanID, const QHostAddress RecHostAddr, const int iTotChans ) {
         pRpcServer->BroadcastNotification ( "jamulusserver/clientConnected",
                                             QJsonObject{
