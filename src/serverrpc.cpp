@@ -101,6 +101,66 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         Q_UNUSED ( params );
     } );
 
+    /// @rpc_method jamulusserver/getCompleteClientInfo
+    /// @brief Returns the list of connected clients along with complete details about them.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {array} result.clients - The list of connected clients.
+    /// @result {number} result.clients[*].id - The client’s channel id.
+    /// @result {string} result.clients[*].address - The client’s address (ip:port).
+    /// @result {string} result.clients[*].name - The client’s name.
+    /// @result {string} result.clients[*].city - The client’s city.
+    /// @result {string} result.clients[*].country - The client’s country.
+    /// @result {string} result.clients[*].instr - The client’s instrument.
+    /// @result {string} result.clients[*].instrpic - The client’s instrument picture.
+    /// @result {string} result.clients[*].skill - The client’s skill.
+    /// @result {number} result.clients[*].jitterBufferSize - The client’s jitter buffer size.
+    /// @result {number} result.clients[*].channels - The number of audio channels of the client.
+    pRpcServer->HandleMethod ( "jamulusserver/getCompleteClientInfo", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonArray            clients;
+        CVector<CHostAddress> vecHostAddresses;
+        CVector<QString>      vecsName;
+        CVector<QString>      vecsCity;
+        CVector<QString>      vecsCountry;
+        CVector<QString>      vecsInstr;
+        CVector<QString>      vecsInstrPic;
+        CVector<QString>      vecsSkill;
+        CVector<int>          veciJitBufNumFrames;
+        CVector<int>          veciNetwFrameSizeFact;
+
+        pServer->GetCompleteClientInfos ( vecHostAddresses, vecsName, vecsCity, vecsCountry, vecsInstr, vecsInstrPic, vecsSkill,  veciJitBufNumFrames, veciNetwFrameSizeFact );
+
+        // we assume that all vectors have the same length
+        const int iNumChannels = vecHostAddresses.Size();
+
+        // fill list with connected clients
+        for ( int i = 0; i < iNumChannels; i++ )
+        {
+            if ( vecHostAddresses[i].InetAddr == QHostAddress ( static_cast<quint32> ( 0 ) ) )
+            {
+                continue;
+            }
+            QJsonObject client{
+                { "id", i },
+                { "address", vecHostAddresses[i].toString ( CHostAddress::SM_IP_PORT ) },
+                { "name", vecsName[i] },
+                { "city", vecsCity[i] },
+                { "country", vecsCountry[i] },
+                { "instr", vecsInstr[i] },
+                { "instrpic", vecsInstrPic[i] },
+                { "skill", vecsSkill[i] },
+                { "jitterBufferSize", veciJitBufNumFrames[i] },
+                { "channels", pServer->GetClientNumAudioChannels ( i ) },
+            };
+            clients.append ( client );
+        }
+        // create result object
+        QJsonObject result{
+            { "clients", clients },
+        };
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
+
     /// @rpc_method jamulusserver/getClients
     /// @brief Returns the list of connected clients along with details about them.
     /// @param {object} params - No parameters (empty object).

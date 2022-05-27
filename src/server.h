@@ -233,7 +233,17 @@ public:
 
     void SetEnableDelayPanning ( bool bDelayPanningOn ) { bDelayPan = bDelayPanningOn; }
     bool IsDelayPanningEnabled() { return bDelayPan; }
+
     virtual void CreateAndSendChatTextForAllConChannels ( const QString& strChatText );
+    void GetCompleteClientInfos ( CVector<CHostAddress>& vecHostAddresses,
+                               CVector<QString>&      vecsName,
+                               CVector<QString>&      vecsCity,
+                               CVector<QString>&      vecsCountry,
+                               CVector<QString>&      vecsInstr,
+                               CVector<QString>&      vecsInstrPic,
+                               CVector<QString>&      vecsSkill,
+                               CVector<int>&          veciJitBufNumFrames,
+                               CVector<int>&          veciNetwFrameSizeFact );
 
 protected:
     // access functions for actual channels
