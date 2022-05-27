@@ -233,6 +233,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusserver/getAvailableMethods
+
+Returns all available rpc methods available at the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.methods | array | All available methods. |
+
+
 ### jamulusserver/getClients
 
 Returns the list of connected clients along with details about them.
