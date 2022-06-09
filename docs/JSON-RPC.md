@@ -74,6 +74,23 @@ Results:
 | result | string | "ok" on success |
 
 
+### jamulus/getAvailableMethods
+
+Returns all available rpc methods.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.methods | array | All available methods. |
+
+
 ### jamulus/getMode
 
 Returns the current mode, i.e. whether Jamulus is running as a server or client.
@@ -182,6 +199,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusclient/setMuted
+
+Mutes or unmutes the client.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.muted | boolean | muted (true or false). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusclient/setName
 
 Sets your name.
@@ -231,23 +265,6 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "ok". |
-
-
-### jamulusserver/getAvailableMethods
-
-Returns all available rpc methods available at the server.
-
-Parameters:
-
-| Name | Type | Description |
-| --- | --- | --- |
-| params | object | No parameters (empty object). |
-
-Results:
-
-| Name | Type | Description |
-| --- | --- | --- |
-| result.methods | array | All available methods. |
 
 
 ### jamulusserver/getClients
@@ -526,8 +543,8 @@ Parameters:
 | Name | Type | Description |
 | --- | --- | --- |
 | params.id | number | The channel ID assigned to the client. |
-| params.id | string | The client's address. |
-| params.id | number | Number of total channels connected to the server. |
+| params.address | string | The client's address. |
+| params.totalChannels | number | Number of total channels connected to the server. |
 
 
 ### jamulusserver/clientDisconnected

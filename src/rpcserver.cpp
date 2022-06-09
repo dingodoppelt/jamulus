@@ -43,6 +43,16 @@ CRpcServer::CRpcServer ( QObject* parent, int iPort, QString strSecret ) :
         response["result"] = result;
         Q_UNUSED ( params );
     } );
+
+    /// @rpc_method jamulus/getAvailableMethods
+    /// @brief Returns all available rpc methods.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {array} result.methods - All available methods.
+    HandleMethod ( "jamulus/getAvailableMethods", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonObject result = getAvailableMethods();
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
 }
 
 CRpcServer::~CRpcServer()
