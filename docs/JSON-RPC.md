@@ -557,7 +557,7 @@ Parameters:
 
 | Name | Type | Description |
 | --- | --- | --- |
-| params.strChatText | string | Chat message text. |
+| params.chatMessage | string | Chat message text. |
 
 
 ### jamulusserver/clientConnected
