@@ -60,7 +60,7 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
 
     /// @rpc_notification jamulusserver/chatMessageReceived
     /// @brief Emitted when a chat message is received.
-    /// @param {string} params.strChatText - Chat message text.
+    /// @param {string} params.chatMessage - Chat message text.
     connect ( pServer, &CServer::receivedChatMessage, [=] ( const QString& strChatText ) {
         pRpcServer->BroadcastNotification ( "jamulusserver/chatMessageReceived",
                                             QJsonObject{
