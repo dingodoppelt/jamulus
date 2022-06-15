@@ -103,7 +103,7 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         Q_UNUSED ( params );
     } );
 
-    /// @rpc_method jamulusserver/getCompleteClientInfo
+    /// @rpc_method jamulusserver/getClientDetails
     /// @brief Returns the list of connected clients along with complete details about them.
     /// @param {object} params - No parameters (empty object).
     /// @result {array} result.clients - The list of connected clients.
@@ -117,7 +117,7 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
     /// @result {string} result.clients[*].skill - The client’s skill.
     /// @result {number} result.clients[*].jitterBufferSize - The client’s jitter buffer size.
     /// @result {number} result.clients[*].channels - The number of audio channels of the client.
-    pRpcServer->HandleMethod ( "jamulusserver/getCompleteClientInfo", [=] ( const QJsonObject& params, QJsonObject& response ) {
+    pRpcServer->HandleMethod ( "jamulusserver/getClientDetails", [=] ( const QJsonObject& params, QJsonObject& response ) {
         QJsonArray            clients;
         CVector<CHostAddress> vecHostAddresses;
         CVector<QString>      vecsName;
