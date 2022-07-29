@@ -16,14 +16,14 @@ First of all, you need to get the Jamulus source code. You can either download i
 
 - For .tar.gz [use this link](https://github.com/jamulussoftware/jamulus/archive/latest.tar.gz) to download the latest release
 - For .zip [use this link](https://github.com/jamulussoftware/jamulus/archive/latest.zip)
-- If you use `git`, [set it up](https://docs.github.com/en/get-started/quickstart/set-up-git) – preferably with SSH if you want to contribute.  
+- If you use `git`, [set it up](https://docs.github.com/en/get-started/quickstart/set-up-git) – preferably with SSH if you want to contribute.
 Then run `git clone git@github.com:jamulussoftware/jamulus` in Terminal to get the bleeding edge version directly from GitHub.
 
 ## Linux
 
 ### Install dependencies
 
-On Debian 11+ you can install the dependencies by issuing the following command: `sudo apt-get -qq --no-install-recommends -y install devscripts build-essential debhelper fakeroot libjack-jackd2-dev qtbase5-dev qttools5-dev-tools`
+On Debian 11+ you can install the dependencies by issuing the following command: `sudo apt-get -qq --no-install-recommends -y install devscripts build-essential debhelper fakeroot libjack-jackd2-dev qtbase5-dev qttools5-dev-tools qtmultimedia5-dev`
 
 **Note:** The exact dependencies might be different for older distributions. See [this comment by softins](https://github.com/jamulussoftware/jamulus/pull/2267#issuecomment-1022127426)
 
@@ -34,6 +34,7 @@ On Debian 11+ you can install the dependencies by issuing the following command:
 - qt5-qtbase
 - jack-audio-connection-kit-devel
 - qt5-linguist
+- qt5-qtmultimedia
 
 ### For all desktop distributions
 
@@ -185,3 +186,20 @@ If you want to build the installer, please run the `deploy_mac.sh` script: `./ma
   `git submodule update --init`
 - Open Jamulus.pro in Qt Creator
 - Now you should be able to Build & Run for Android.
+
+## Compile time arguments
+
+During compile time some CONFIG arguments can be given to enable or disable specific features. Just run `qmake "CONFIG+=<insert build time args>"`. The following table shows available compile time options:
+
+| Option                  | Description                                                             |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `serveronly`            | Only support running as Server                                          |
+| `headless`              | Disable GUI. Supports Client and Server. Usually used with serveronly   |
+| `nojsonrpc`             | Disable JSON-RPC support                                                |
+| `jackonwindows`         | Use JACK instead of ASIO on Windows                                     |
+| `jackonmac`             | Use JACK instead of CoreAudio on macOS (untested)                       |
+| `server_bundle`         | macOS only: Create an application bundle which starts server by default |
+| `opus_shared_lib`       | Use external OPUS library                                               |
+| `disable_version_check` | Skip checks for version updates                                         |
+| `noupcasename`          | Compile Jamulus binary as lower case "jamulus" instead of "Jamulus"     |
+| `raspijamulus`          | Use raspijamulus.sh specific enhancements for build on Raspberry Pi     |
