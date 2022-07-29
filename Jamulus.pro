@@ -1,4 +1,4 @@
-VERSION = 3.8.2nightly3
+VERSION = 3.9.0dev
 
 # use target name which does not use a capital letter at the beginning
 contains(CONFIG, "noupcasename") {
@@ -39,11 +39,15 @@ contains(CONFIG, "headless") {
     QT -= gui
 } else {
     QT += widgets
+    QT += multimedia
 }
 
+# Hint: When adding new translations, make sure to update
+# DISTFILES (above) and src/resources.qrc as well.
 LRELEASE_DIR = src/translation
 TRANSLATIONS = src/translation/translation_de_DE.ts \
     src/translation/translation_fr_FR.ts \
+    src/translation/translation_ko_KR.ts \
     src/translation/translation_pt_PT.ts \
     src/translation/translation_pt_BR.ts \
     src/translation/translation_es_ES.ts \
@@ -686,6 +690,7 @@ DISTFILES += ChangeLog \
     distributions/jamulus-server.svg \
     src/translation/translation_de_DE.qm \
     src/translation/translation_fr_FR.qm \
+    src/translation/translation_ko_KR.qm \
     src/translation/translation_pt_PT.qm \
     src/translation/translation_pt_BR.qm \
     src/translation/translation_es_ES.qm \

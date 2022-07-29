@@ -4,6 +4,8 @@ set -eu
 QT_DIR=/usr/local/opt/qt
 AQTINSTALL_VERSION=2.1.0
 
+TARGET_ARCH="${TARGET_ARCH:-}"
+
 if [[ ! ${QT_VERSION:-} =~ [0-9]+\.[0-9]+\..* ]]; then
     echo "Environment variable QT_VERSION must be set to a valid Qt version"
     exit 1
@@ -19,7 +21,14 @@ setup() {
     else
         echo "Installing Qt..."
         python3 -m pip install "aqtinstall==${AQTINSTALL_VERSION}"
-        python3 -m aqt install-qt --outputdir "${QT_DIR}" mac desktop "${QT_VERSION}" --archives qtbase qttools qttranslations
+        local qtmultimedia=()
+        if [[ ! "${QT_VERSION}" =~ 5\..* ]]; then
+            # From Qt6 onwards, qtmultimedia is a module and cannot be installed
+            # as an archive anymore.
+            qtmultimedia=("--modules")
+        fi
+        qtmultimedia+=("qtmultimedia")
+        python3 -m aqt install-qt --outputdir "${QT_DIR}" mac desktop "${QT_VERSION}" --archives qtbase qttools qttranslations "${qtmultimedia[@]}"
     fi
 }
 
@@ -60,7 +69,7 @@ build_app_as_dmg_installer() {
     if prepare_signing; then
         BUILD_ARGS=("-s" "${MACOS_CERTIFICATE_ID}")
     fi
-    ./mac/deploy_mac.sh "${BUILD_ARGS[@]}"
+    TARGET_ARCH="${TARGET_ARCH}" ./mac/deploy_mac.sh "${BUILD_ARGS[@]}"
 }
 
 pass_artifact_to_job() {
