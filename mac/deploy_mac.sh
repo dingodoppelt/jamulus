@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -eu -o pipefail
 
 root_path=$(pwd)
 project_path="${root_path}/Jamulus.pro"
@@ -36,23 +36,50 @@ cleanup() {
 
 build_app() {
     local client_or_server="${1}"
-
-    # Build Jamulus
-    declare -a BUILD_ARGS=("_UNUSED_DUMMY=''")  # old bash fails otherwise
-    if [[ "${TARGET_ARCH:-}" ]]; then
-        BUILD_ARGS=("QMAKE_APPLE_DEVICE_ARCHS=${TARGET_ARCH}" "QT_ARCH=${TARGET_ARCH}")
-    fi
-    qmake "${project_path}" -o "${build_path}/Makefile" "CONFIG+=release" "${BUILD_ARGS[@]}" "${@:2}"
-    local target_name
-    target_name=$(sed -nE 's/^QMAKE_TARGET *= *(.*)$/\1/p' "${build_path}/Makefile")
     local job_count
     job_count=$(sysctl -n hw.ncpu)
 
-    make -f "${build_path}/Makefile" -C "${build_path}" -j "${job_count}"
+    # Build Jamulus for all requested architectures, defaulting to x86_64 if none provided:
+    local target_name
+    local target_arch
+    local target_archs_array
+    IFS=' ' read -ra target_archs_array <<< "${TARGET_ARCHS:-x86_64}"
+    for target_arch in "${target_archs_array[@]}"; do
+        if [[ "${target_arch}" != "${target_archs_array[0]}" ]]; then
+            # This is the second (or a later) first pass of a multi-architecture build.
+            # We need to prune all leftovers from the previous pass here in order to force re-compilation now.
+            make -f "${build_path}/Makefile" -C "${build_path}" distclean
+        fi
+        qmake "${project_path}" -o "${build_path}/Makefile" \
+            "CONFIG+=release" \
+            "QMAKE_APPLE_DEVICE_ARCHS=${target_arch}" "QT_ARCH=${target_arch}" \
+            "${@:2}"
+        make -f "${build_path}/Makefile" -C "${build_path}" -j "${job_count}"
+        target_name=$(sed -nE 's/^QMAKE_TARGET *= *(.*)$/\1/p' "${build_path}/Makefile")
+        if [[ ${#target_archs_array[@]} -gt 1 ]]; then
+            # When building for multiple architectures, move the binary to a safe place to avoid overwriting/cleaning by the other passes.
+            mv "${build_path}/${target_name}.app/Contents/MacOS/${target_name}" "${deploy_path}/${target_name}.arch_${target_arch}"
+        fi
+    done
+    if [[ ${#target_archs_array[@]} -gt 1 ]]; then
+        echo "Building universal binary from: " "${deploy_path}/${target_name}.arch_"*
+        lipo -create -output "${build_path}/${target_name}.app/Contents/MacOS/${target_name}" "${deploy_path}/${target_name}.arch_"*
+        rm -f "${deploy_path}/${target_name}.arch_"*
+
+        local file_output
+        file_output=$(file "${build_path}/${target_name}.app/Contents/MacOS/${target_name}")
+        echo "${file_output}"
+        for target_arch in "${target_archs_array[@]}"; do
+            if ! grep -q "for architecture ${target_arch}" <<< "${file_output}"; then
+                echo "Missing ${target_arch} in file output -- build went wrong?"
+                exit 1
+            fi
+        done
+    fi
 
     # Add Qt deployment dependencies
     if [[ -z "$cert_name" ]]; then
-        macdeployqt "${build_path}/${target_name}.app" -verbose=2 -always-overwrite
+        macdeployqt "${build_path}/${target_name}.app" -verbose=2 -always-overwrite -codesign="-"
     else
         macdeployqt "${build_path}/${target_name}.app" -verbose=2 -always-overwrite -hardened-runtime -timestamp -appstore-compliant -sign-for-notarization="${cert_name}"
     fi

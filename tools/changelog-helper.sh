@@ -1,6 +1,6 @@
 #!/bin/bash
 # Requirements: git, Github CLI (gh), jq
-set -eu
+set -eu -o pipefail
 
 echo "This tool checks the ChangeLog file and compares its entries for the top-most"
 echo "release against the associated Github milestone and the git log."
@@ -158,7 +158,7 @@ check_or_add_pr() {
     fi
     local title_suggestion_in_pr
     title_suggestion_in_pr=$(gh pr view "$id" --json body,comments,reviews --jq '(.body), (.comments[] .body), (.reviews[] .body)' |
-        grep -oP '\bCHANGELOG:\s*\K([^\\]{5,})' | tail -n1 | sanitize_title)
+        grep -oP '\bCHANGELOG:\s*\K([^\\]{5,})' | tail -n1 | sanitize_title || true)
     if [[ "${title_suggestion_in_pr}" ]]; then
         title="${title_suggestion_in_pr}"
         if [[ "${title_suggestion_in_pr}" == "SKIP" ]]; then

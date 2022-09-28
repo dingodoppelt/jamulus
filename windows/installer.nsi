@@ -1,12 +1,12 @@
 ; Jamulus NSIS Installer with Modern User Interface
 
 ; Includes
-!include "x64.nsh"                             ; 64bit architecture support
-!include "MUI2.nsh"                            ; Modern UI
-!include "LogicLib.nsh"                        ; Logical operators
-!include "Sections.nsh"                        ; Support for section selection
-!include "nsDialogs.nsh"                       ; Support custom pages with dialogs
-!include "NSISCopyRegistryKey\registry.nsh"    ; Support moving registry keys
+!include "x64.nsh"                                                  ; 64bit architecture support
+!include "MUI2.nsh"                                                 ; Modern UI
+!include "LogicLib.nsh"                                             ; Logical operators
+!include "Sections.nsh"                                             ; Support for section selection
+!include "nsDialogs.nsh"                                            ; Support custom pages with dialogs
+!include "${ROOT_PATH}\libs\NSIS\NSISCopyRegistryKey\registry.nsh"  ; Support moving registry keys
 
 
 ; Compile-time definitions
@@ -37,7 +37,7 @@ Caption      "${APP_NAME} ${APP_VERSION} Installer"
 BrandingText "${APP_NAME}. Make music online. With friends. For free."
 
  ; Additional plugin location (for nsProcess)
-!addplugindir "${WINDOWS_PATH}"
+!addplugindir "${ROOT_PATH}\libs\NSIS"
 
 ; Add support for copying registry keys
 
@@ -49,17 +49,17 @@ BrandingText "${APP_NAME}. Make music online. With friends. For free."
 !endif
 
 ; Installer graphical element configuration
-!define MUI_ICON                       "${WINDOWS_PATH}\mainicon.ico"
-!define MUI_UNICON                     "${WINDOWS_PATH}\mainicon.ico"
-!define SERVER_ICON                    "${WINDOWS_PATH}\jamulus-server-icon-2020.ico"
+!define MUI_ICON                       "${ROOT_PATH}\src\res\win-mainicon.ico"
+!define MUI_UNICON                     "${ROOT_PATH}\src\res\win-mainicon.ico"
+!define SERVER_ICON                    "${ROOT_PATH}\src\res\win-jamulus-server.ico"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP         "${WINDOWS_PATH}\installer-banner.bmp"
+!define MUI_HEADERIMAGE_BITMAP         "${ROOT_PATH}\src\res\win-installer-banner.bmp"
 !if ${BUILD_OPTION} == "jackonwindows"
-    !define MUI_WELCOMEFINISHPAGE_BITMAP   "${WINDOWS_PATH}\installer-welcome.bmp"
-    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${WINDOWS_PATH}\installer-welcome.bmp"
+    !define MUI_WELCOMEFINISHPAGE_BITMAP   "${ROOT_PATH}\src\res\win-installer-welcome.bmp"
+    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${ROOT_PATH}\src\res\win-installer-welcome.bmp"
 !else
-    !define MUI_WELCOMEFINISHPAGE_BITMAP   "${WINDOWS_PATH}\installer-welcome-asio.bmp"
-    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${WINDOWS_PATH}\installer-welcome-asio.bmp"
+    !define MUI_WELCOMEFINISHPAGE_BITMAP   "${ROOT_PATH}\src\res\win-installer-welcome-asio.bmp"
+    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "${ROOT_PATH}\src\res\win-installer-welcome-asio.bmp"
 !endif
 
 ; Store the installer language - must be placed before the installer page configuration

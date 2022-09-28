@@ -827,6 +827,7 @@ public:
     static QLocale::Country        WireFormatCountryCodeToQtCountry ( unsigned short iCountryCode );
     static unsigned short          QtCountryToWireFormatCountryCode ( const QLocale::Country eCountry );
     static bool                    IsCountryCodeSupported ( unsigned short iCountryCode );
+    static QLocale::Country        GetCountryCodeByTwoLetterCode ( QString sTwoLetterCode );
 #if QT_VERSION >= QT_VERSION_CHECK( 6, 0, 0 )
     // ./tools/qt5-to-qt6-country-code-table.py generates these lists:
     constexpr int const static wireFormatToQt6Table[] = {
@@ -853,6 +854,7 @@ public:
         195, 196, 114, 254, 197, 198, 201, 202, 203, 205, 206, 207, 208, 209, 210, 211, 62,  212, 213, 214, 215, 253, 216, 217, 218, 219, 220,
         221, 222, 223, 224, 226, 225, 234, 227, 228, 229, 230, 231, 232, 235, 236, 260, 237, 239, 240,
     };
+    constexpr int const static qt6CountryToWireFormatLen = sizeof ( qt6CountryToWireFormat ) / sizeof ( qt6CountryToWireFormat[0] );
 #endif
 };
 

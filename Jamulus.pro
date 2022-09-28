@@ -51,6 +51,7 @@ TRANSLATIONS = src/translation/translation_de_DE.ts \
     src/translation/translation_pt_PT.ts \
     src/translation/translation_pt_BR.ts \
     src/translation/translation_es_ES.ts \
+    src/translation/translation_nb_NO.ts \
     src/translation/translation_nl_NL.ts \
     src/translation/translation_pl_PL.ts \
     src/translation/translation_sk_SK.ts \
@@ -78,7 +79,7 @@ DEFINES += QT_NO_DEPRECATED_WARNINGS
 win32 {
     DEFINES -= UNICODE # fixes issue with ASIO SDK (asiolist.cpp is not unicode compatible)
     DEFINES += NOMINMAX # solves a compiler error in qdatetime.h (Qt5)
-    RC_FILE = windows/mainicon.rc
+    RC_FILE = src/res/win-mainicon.rc
     mingw* {
         LIBS += -lole32 \
             -luser32 \
@@ -159,15 +160,15 @@ win32 {
 
         DEFINES += SERVER_BUNDLE
         TARGET = $${TARGET}Server
-        MACOSX_BUNDLE_ICON.files = mac/jamulus-server-icon-2020.icns
-        RC_FILE = mac/jamulus-server-icon-2020.icns
+        MACOSX_BUNDLE_ICON.files = src/res/mac-jamulus-server.icns
+        RC_FILE = src/res/mac-jamulus-server.icns
     } else {
-        MACOSX_BUNDLE_ICON.files = mac/mainicon.icns
-        RC_FILE = mac/mainicon.icns
+        MACOSX_BUNDLE_ICON.files = src/res/mac-mainicon.icns
+        RC_FILE = src/res/mac-mainicon.icns
     }
 
-    HEADERS += mac/activity.h mac/badgelabel.h
-    OBJECTIVE_SOURCES += mac/activity.mm mac/badgelabel.mm
+    HEADERS += src/mac/activity.h src/mac/badgelabel.h
+    OBJECTIVE_SOURCES += src/mac/activity.mm src/mac/badgelabel.mm
     CONFIG += x86
     QMAKE_TARGET_BUNDLE_PREFIX = io.jamulus
 
@@ -220,8 +221,8 @@ win32 {
 
 } else:ios {
     QMAKE_INFO_PLIST = ios/Info.plist
-    OBJECTIVE_SOURCES += ios/ios_app_delegate.mm
-    HEADERS += ios/ios_app_delegate.h
+    OBJECTIVE_SOURCES += src/ios/ios_app_delegate.mm
+    HEADERS += src/ios/ios_app_delegate.h
     HEADERS += src/sound/coreaudio-ios/sound.h
     OBJECTIVE_SOURCES += src/sound/coreaudio-ios/sound.mm
     QMAKE_TARGET_BUNDLE_PREFIX = io.jamulus
@@ -247,7 +248,7 @@ win32 {
     HEADERS += src/sound/oboe/sound.h
 
     SOURCES += src/sound/oboe/sound.cpp \
-        android/androiddebug.cpp
+        src/android/androiddebug.cpp
 
     LIBS += -lOpenSLES
     ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
@@ -326,29 +327,29 @@ win32 {
         }
         APPSDIR = $$absolute_path($$APPSDIR, $$PREFIX)
         desktop.path = $$APPSDIR
-        QMAKE_SUBSTITUTES += distributions/jamulus.desktop.in distributions/jamulus-server.desktop.in
-        desktop.files = distributions/jamulus.desktop distributions/jamulus-server.desktop
+        QMAKE_SUBSTITUTES += linux/jamulus.desktop.in linux/jamulus-server.desktop.in
+        desktop.files = linux/jamulus.desktop linux/jamulus-server.desktop
 
         isEmpty(ICONSDIR) {
             ICONSDIR = share/icons/hicolor/512x512/apps
         }
         ICONSDIR = $$absolute_path($$ICONSDIR, $$PREFIX)
         icons.path = $$ICONSDIR
-        icons.files = distributions/jamulus.png
+        icons.files = src/res/io.jamulus.jamulus.png
 
         isEmpty(ICONSDIR_SVG) {
             ICONSDIR_SVG = share/icons/hicolor/scalable/apps/
         }
         ICONSDIR_SVG = $$absolute_path($$ICONSDIR_SVG, $$PREFIX)
         icons_svg.path = $$ICONSDIR_SVG
-        icons_svg.files = distributions/jamulus.svg distributions/jamulus-server.svg
+        icons_svg.files = src/res/io.jamulus.jamulus.svg src/res/io.jamulus.jamulusserver.svg
 
         isEmpty(MANDIR) {
             MANDIR = share/man/man1
         }
         MANDIR = $$absolute_path($$MANDIR, $$PREFIX)
         man.path = $$MANDIR
-        man.files = distributions/Jamulus.1
+        man.files = linux/Jamulus.1
 
         INSTALLS += target desktop icons icons_svg man
     }
@@ -683,17 +684,18 @@ DISTFILES += ChangeLog \
     COPYING \
     CONTRIBUTING.md \
     README.md \
-    distributions/jamulus.desktop.in \
-    distributions/jamulus-server.desktop.in \
-    distributions/jamulus.png \
-    distributions/jamulus.svg \
-    distributions/jamulus-server.svg \
+    linux/jamulus.desktop.in \
+    linux/jamulus-server.desktop.in \
+    src/res/io.jamulus.jamulus.png \
+    src/res/io.jamulus.jamulus.svg \
+    src/res/io.jamulus.jamulusserver.svg \
     src/translation/translation_de_DE.qm \
     src/translation/translation_fr_FR.qm \
     src/translation/translation_ko_KR.qm \
     src/translation/translation_pt_PT.qm \
     src/translation/translation_pt_BR.qm \
     src/translation/translation_es_ES.qm \
+    src/translation/translation_nb_NO.qm \
     src/translation/translation_nl_NL.qm \
     src/translation/translation_pl_PL.qm \
     src/translation/translation_it_IT.qm \
@@ -1144,6 +1146,6 @@ contains(CONFIG, "disable_version_check") {
 # be sure to update .github/workflows/coding-style-check.yml and .clang-format-ignore as well.
 CLANG_FORMAT_SOURCES = $$files(*.cpp, true) $$files(*.mm, true) $$files(*.h, true)
 CLANG_FORMAT_SOURCES = $$find(CLANG_FORMAT_SOURCES, ^\(android|ios|mac|linux|src|windows\)/)
-CLANG_FORMAT_SOURCES ~= s!^\(windows/nsProcess/|libs/ASIOSDK2/|src/res/qrc_resources\.cpp\)\S*$!!g
+CLANG_FORMAT_SOURCES ~= s!^\(libs/.*/|src/res/qrc_resources\.cpp\)\S*$!!g
 clang_format.commands = 'clang-format -i $$CLANG_FORMAT_SOURCES'
 QMAKE_EXTRA_TARGETS += clang_format

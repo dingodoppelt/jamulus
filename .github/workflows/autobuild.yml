@@ -18,6 +18,10 @@
 
 on:
   workflow_dispatch:
+    inputs:
+      build_all_targets:
+        type: boolean
+        description: 'Build all targets (instead of just the main platforms)'
   push:
     tags:
       - "r*"
@@ -62,12 +66,13 @@ jobs:
       publish_to_release:           ${{ steps.get-build-vars.outputs.PUBLISH_TO_RELEASE }}
       upload_url:                   ${{ steps.create-release.outputs.upload_url }}
       build_version:                ${{ steps.get-build-vars.outputs.BUILD_VERSION }}
+      build_all_targets:            ${{ steps.decide-build-targets.outputs.build_all_targets }}
     env:
       release_changelog_path:       ./.github_release_changelog.md
 
     steps:
       - name:                       Checkout code
-        uses:                       actions/checkout@v2
+        uses:                       actions/checkout@v3
 
       - name:                       Determine release version, type and prerelease variables
         run:                        ./.github/autobuild/get_build_vars.py
@@ -80,7 +85,7 @@ jobs:
       - name:                       Remove release ${{steps.get-build-vars.outputs.RELEASE_TAG}}, if existing
         if:                         steps.get-build-vars.outputs.PUBLISH_TO_RELEASE == 'true'
         continue-on-error:          true
-        uses:                       dev-drprasad/delete-tag-and-release@v0.1.2
+        uses:                       dev-drprasad/delete-tag-and-release@085c6969f18bad0de1b9f3fe6692a3cd01f64fe5
         with:
           delete_release:           true
           tag_name:                 ${{ steps.get-build-vars.outputs.RELEASE_TAG }}
@@ -100,6 +105,76 @@ jobs:
           prerelease:               ${{ steps.get-build-vars.outputs.IS_PRERELEASE }}
           draft:                    false
 
+      - name:                       Decide which targets to build for
+        id:                         decide-build-targets
+        env:
+          GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_ALL_TARGETS:  ${{ github.event.inputs.build_all_targets }}
+          PR_NUMBER:                ${{ github.event.number }}
+          PR_BASE:                  ${{ github.event.pull_request.base.sha }}
+          PR_HEAD:                  ${{ github.event.pull_request.head.sha }}
+        run:                        |
+          set -eu
+          build_all_targets() {
+            echo "::set-output name=build_all_targets::${1}"
+            echo "Building for all targets? Result: ${1}"
+            exit 0
+          }
+
+          handle_push() {
+            if [[ "${GITHUB_REF}" == "refs/tags/"* ]]; then
+              echo 'Triggered by a tag push, building all targets'
+              build_all_targets 'true'
+            fi
+            if [[ "${GITHUB_REF}" == "refs/heads/autobuild"* ]]; then
+              echo 'Triggered by a push to an autobuild* branch, building all targets'
+              build_all_targets 'true'
+            fi
+          }
+
+          handle_workflow_dispatch() {
+            if [[ "${INPUT_BUILD_ALL_TARGETS}" == 'true' ]]; then
+              echo 'Triggered by manual run with "Build all targets" checkbox set'
+              build_all_targets 'true'
+            fi
+          }
+
+          handle_pull_request() {
+            pr_body_contains_magic_string() {
+              pr_body=$(gh pr view "${PR_NUMBER}" --json body --jq .body)
+              grep -vP '<!--' <<< "$pr_body" | grep -qiF -- 'AUTOBUILD: Please build all targets'
+            }
+            if pr_body_contains_magic_string; then
+              echo 'Triggered by a PR with magic AUTOBUILD: string, building all targets'
+              build_all_targets 'true'
+            fi
+
+            pr_contains_build_changes() {
+              git fetch origin "${PR_BASE}" "${PR_HEAD}"
+              git diff --name-only "${PR_BASE}..${PR_HEAD}" |
+                grep -qP 'autobuild|windows|linux|mac|ios|android|\.pro'
+            }
+            if pr_contains_build_changes; then
+              echo 'Triggered by a PR with build- or platform-specific changes, building all targets'
+              build_all_targets 'true'
+            fi
+          }
+
+          case "${GITHUB_EVENT_NAME}" in
+            push)
+              handle_push
+              ;;
+            workflow_dispatch)
+              handle_workflow_dispatch
+              ;;
+            pull_request)
+              handle_pull_request
+              ;;
+          esac
+
+          echo 'default case, not building all targets'
+          build_all_targets 'false'
+
 
   release_assets:
     name:                           Build for ${{ matrix.config.config_name }}
@@ -115,37 +190,34 @@ jobs:
             building_on_os:         ubuntu-20.04
             base_command:           ./.github/autobuild/android.sh
             run_codeql:             true
+            is_main_build_target:   true
             # Jamulus.pro needs to count git history length for android versioning:
             checkout_fetch_depth:   '0'
 
           - config_name:            Linux .deb amd64 (artifacts+codeQL)
             target_os:              linux
-            building_on_os:         ubuntu-18.04
+            building_on_os:         ubuntu-22.04
+            building_container:     ubuntu:18.04
             base_command:           ./.github/autobuild/linux_deb.sh
             run_codeql:             true
+            is_main_build_target:   true
 
           - config_name:            Linux .deb armhf (artifacts)
             target_os:              linux
-            building_on_os:         ubuntu-18.04
+            building_on_os:         ubuntu-22.04
+            building_container:     ubuntu:18.04
             base_command:           TARGET_ARCH=armhf ./.github/autobuild/linux_deb.sh
             run_codeql:             false
 
           - config_name:            MacOS (artifacts)
             target_os:              macos
             building_on_os:         macos-12
-            base_command:           QT_VERSION=6.3.1 SIGN_IF_POSSIBLE=1 ./.github/autobuild/mac.sh
+            base_command:           QT_VERSION=6.3.2 SIGN_IF_POSSIBLE=1 TARGET_ARCHS="x86_64 arm64" ./.github/autobuild/mac.sh
             # Disable CodeQL on mac as it interferes with signing the binaries (signing hangs, see #2563 and #2564)
             run_codeql:             false
             # Latest Xcode which runs on macos-11:
             xcode_version:          13.4.1
-
-          - config_name:            MacOS arm64 (artifacts)
-            target_os:              macos
-            building_on_os:         macos-12
-            base_command:           QT_VERSION=6.3.1 SIGN_IF_POSSIBLE=1 TARGET_ARCH=arm64 ARTIFACT_SUFFIX=_arm64 ./.github/autobuild/mac.sh
-            # Disable CodeQL on mac as it interferes with signing the binaries (signing hangs, see #2563 and #2564)
-            run_codeql:             false
-            xcode_version:          13.4.1
+            is_main_build_target:   true
 
           # Reminder: If Legacy is removed, be sure to add a dedicated job for CodeQL again.
           - config_name:            MacOS Legacy (artifacts+CodeQL)
@@ -160,6 +232,7 @@ jobs:
             # Xcode 12.1.1 is the most-recent 12.1.x release:
             # https://xcodereleases.com/
             xcode_version:          12.1.1
+            is_main_build_target:   true
 
           - config_name:            iOS (artifacts)
             target_os:              ios
@@ -176,6 +249,7 @@ jobs:
             building_on_os:         windows-2022
             base_command:           powershell .\.github\autobuild\windows.ps1 -Stage
             run_codeql:             true
+            is_main_build_target:   true
 
           - config_name:            Windows JACK (artifact)
             target_os:              windows
@@ -183,23 +257,50 @@ jobs:
             base_command:           powershell .\.github\autobuild\windows.ps1 -BuildOption jackonwindows -Stage
             run_codeql:             false
 
+        # This injects the build_all_targets information into each matrix output:
+        build_all_targets:
+          - ${{ needs.create_release.outputs.build_all_targets }}
+
+        # Exclude all non-main build targets if we are not building for all targets:
+        exclude:
+          - build_all_targets:      'false'  # This is based on a script output and is therefore a string
+            config:
+              is_main_build_target: null
+
     runs-on:                        ${{ matrix.config.building_on_os }}
+    container:                      ${{ matrix.config.building_container }}
     steps:
       - name:                       Select Xcode version for Mac
         if:                         matrix.config.target_os == 'macos' || matrix.config.target_os == 'ios'
-        uses:                       maxim-lobanov/setup-xcode@v1
+        uses:                       maxim-lobanov/setup-xcode@4aa4176a819ae7c019451acfda0bba67bffc6704
         with:
           xcode-version:            ${{ matrix.config.xcode_version }}
 
+      - name:                       Set up base dependencies in container environment
+        if:                         matrix.config.building_container == 'ubuntu:18.04'
+        run:                        |
+          set -eu
+          apt-get -qq update
+          apt-get install -y software-properties-common sudo
+          add-apt-repository ppa:git-core/ppa
+          apt-get -qq update
+          apt-get -qq -y install git-core
+          # Github Runner environments usually whitelist the default checkout directory for git.
+          # However, when using containers, we have to do that manually in order for git commands to work
+          # (e.g. in Jamulus.pro's VERSION logic):
+          # https://github.com/actions/runner/issues/2033
+          # https://github.com/actions/checkout/issues/766
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
       - name:                       Checkout code
-        uses:                       actions/checkout@v2
+        uses:                       actions/checkout@v3
         with:
           submodules:               true
           fetch-depth:              ${{ matrix.config.checkout_fetch_depth || '1' }}
 
       - name:                       Cache Mac dependencies
         if:                         matrix.config.target_os == 'macos'
-        uses:                       actions/cache@v2
+        uses:                       actions/cache@v3
         with:
           path: |
             /usr/local/opt/qt
@@ -208,18 +309,18 @@ jobs:
 
       - name:                       Cache Windows dependencies
         if:                         matrix.config.target_os == 'windows'
-        uses:                       actions/cache@v2
+        uses:                       actions/cache@v3
         with:
           path: |
             C:\Qt
             C:\ChocoCache
-            ~\windows\NSIS
-            ~\libs\ASIOSDK2
+            ${{ github.workspace }}\libs\NSIS\NSIS-source
+            ${{ github.workspace }}\libs\ASIOSDK2
           key:                      ${{ matrix.config.target_os }}-${{ hashFiles('.github/workflows/autobuild.yml', '.github/autobuild/windows.ps1', 'windows/deploy_windows.ps1') }}-${{ matrix.config.base_command }}
 
       - name:                       Cache Android dependencies
         if:                         matrix.config.target_os == 'android'
-        uses:                       actions/cache@v2
+        uses:                       actions/cache@v3
         with:
           path: |
             /opt/Qt
@@ -258,7 +359,7 @@ jobs:
       - name:                       Upload Artifact 1 to Job
         # Every build job has at least one artifact. Therefore, no `if` here.
         # If the artifact is missing, this should fail.
-        uses:                       actions/upload-artifact@v2
+        uses:                       actions/upload-artifact@v3
         with:
           name:                     ${{ steps.get-artifacts.outputs.artifact_1 }}
           path:                     deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
@@ -267,7 +368,7 @@ jobs:
 
       - name:                       Upload Artifact 2 to Job
         if:                         steps.get-artifacts.outputs.artifact_2
-        uses:                       actions/upload-artifact@v2
+        uses:                       actions/upload-artifact@v3
         with:
           name:                     ${{ steps.get-artifacts.outputs.artifact_2 }}
           path:                     deploy/${{ steps.get-artifacts.outputs.artifact_2 }}
@@ -291,7 +392,7 @@ jobs:
                                     steps.build.outputs.macos_signed == 'true' &&
                                     needs.create_release.outputs.publish_to_release == 'true'
         id:                         staple-macOS-app
-        uses:                       devbotsxyz/xcode-staple@v1
+        uses:                       devbotsxyz/xcode-staple@ae68b22ca35d15864b7f7923e1a166533b2944bf
         with:
           product-path:             deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
 
