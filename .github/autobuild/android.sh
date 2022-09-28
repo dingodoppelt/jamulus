@@ -1,11 +1,13 @@
 #!/bin/bash
 set -eu
 
+# Some of the following version pinnings are semi-automatically checked for
+# updates. Update .github/workflows/bump-dependencies.yaml when renaming those:
 COMMANDLINETOOLS_VERSION=6858069
 ANDROID_NDK_VERSION=r21d
 ANDROID_PLATFORM=android-30
 ANDROID_BUILD_TOOLS=30.0.2
-AQTINSTALL_VERSION=2.1.0
+AQTINSTALL_VERSION=2.2.3
 QT_VERSION=5.15.2
 
 # Only variables which are really needed by sub-commands are exported.

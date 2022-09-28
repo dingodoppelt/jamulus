@@ -572,6 +572,20 @@ int main ( int argc, char** argv )
             continue;
         }
 
+        // Clean up legacy fader settings --------------------------------------
+        // Undocumented temporary command line argument: Clean up fader settings
+        // corrupted by bug #2680.  Only needs to be used once (per file).
+        if ( GetFlagArgument ( argv,
+                               i,
+                               "--cleanuplegacyfadersettings", // no short form
+                               "--cleanuplegacyfadersettings" ) )
+        {
+            qInfo() << "- will clean up legacy fader settings on load";
+            CommandLineOptions << "--cleanuplegacyfadersettings";
+            ClientOnlyOptions << "--cleanuplegacyfadersettings";
+            continue;
+        }
+
         // Unknown option ------------------------------------------------------
         qCritical() << qUtf8Printable ( QString ( "%1: Unknown option '%2' -- use '--help' for help" ).arg ( argv[0] ).arg ( argv[i] ) );
 
@@ -1075,13 +1089,13 @@ QString UsageArguments ( char** argv )
            "  -L, --licence         show an agreement window before users can connect\n"
            "  -m, --htmlstatus      enable HTML status file, set file name\n"
            "  -o, --serverinfo      registration info for this Server.  Format:\n"
-           "                        [name];[city];[country as Qt5 QLocale ID]\n"
+           "                        [name];[city];[country as two-letter ISO country code or Qt5 QLocale ID]\n"
            "      --serverpublicip  public IP address for this Server.  Needed when\n"
            "                        registering with a server list hosted\n"
            "                        behind the same NAT\n"
            "  -P, --delaypan        start with delay panning enabled\n"
-           "  -R, --recording       sets directory to contain recorded jams\n"
-           "      --norecord        disables recording (when enabled by default by -R)\n"
+           "  -R, --recording       set server recording directory; server will record when a session is active by default\n"
+           "      --norecord        set server not to record by default when recording is configured\n"
            "  -s, --server          start Server\n"
            "      --serverbindip    IP address the Server will bind to (rather than all)\n"
            "  -T, --multithreading  use multithreading to make better use of\n"

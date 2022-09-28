@@ -1423,11 +1423,41 @@ bool CLocale::IsCountryCodeSupported ( unsigned short iCountryCode )
 #if QT_VERSION >= QT_VERSION_CHECK( 6, 0, 0 )
     // On newer Qt versions there might be codes which do not have a Qt5 equivalent.
     // We have no way to support those sanely right now.
+    // Before we can check that via an array lookup, we have to ensure that
+    // we are within the boundaries of that array:
+    if ( iCountryCode >= qt6CountryToWireFormatLen )
+    {
+        return false;
+    }
     return qt6CountryToWireFormat[iCountryCode] != -1;
 #else
     // All Qt5 codes are supported.
-    Q_UNUSED ( iCountryCode );
-    return true;
+    return iCountryCode <= QLocale::LastCountry;
+#endif
+}
+
+QLocale::Country CLocale::GetCountryCodeByTwoLetterCode ( QString sTwoLetterCode )
+{
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 2, 0 )
+    return QLocale::codeToTerritory ( sTwoLetterCode );
+#else
+    QList<QLocale> vLocaleList = QLocale::matchingLocales ( QLocale::AnyLanguage, QLocale::AnyScript, QLocale::AnyCountry );
+    QStringList    vstrLocParts;
+
+    // Qt < 6.2 does not support lookups from two-letter iso codes to
+    // QLocale::Country. Therefore, we have to loop over all supported
+    // locales and perform the matching ourselves.
+    // In the future, QLocale::codeToTerritory can be used.
+    foreach ( const QLocale qLocale, vLocaleList )
+    {
+        QStringList vstrLocParts = qLocale.name().split ( "_" );
+
+        if ( vstrLocParts.size() >= 2 && vstrLocParts.at ( 1 ).toLower() == sTwoLetterCode )
+        {
+            return qLocale.country();
+        }
+    }
+    return QLocale::AnyCountry;
 #endif
 }
 
