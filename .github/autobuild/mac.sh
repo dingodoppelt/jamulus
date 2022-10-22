@@ -4,7 +4,7 @@ set -eu
 QT_DIR=/usr/local/opt/qt
 # The following version pinnings are semi-automatically checked for
 # updates. Verify .github/workflows/bump-dependencies.yaml when changing those manually:
-AQTINSTALL_VERSION=2.2.3
+AQTINSTALL_VERSION=3.0.1
 
 TARGET_ARCHS="${TARGET_ARCHS:-}"
 
@@ -52,6 +52,8 @@ prepare_signing() {
     # Set up a keychain for the build:
     security create-keychain -p "${KEYCHAIN_PASSWORD}" build.keychain
     security default-keychain -s build.keychain
+    # Remove default re-lock timeout to avoid codesign hangs:
+    security set-keychain-settings build.keychain
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" build.keychain
     security import certificate.p12 -k build.keychain -P "${MACOS_CERTIFICATE_PWD}" -T /usr/bin/codesign
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" build.keychain

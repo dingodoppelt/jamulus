@@ -1,14 +1,16 @@
+### 3.9.1dev <- NOTE: the release version number will be 3.9.2 ###
 
-### 3.9.0dev <- NOTE: the release version number will be 3.9.1 ###
 
-- Bugfix: Correct new channel not being shown to others if it connects with null channel info (#2754, #2774).
-  (contributed by @softins)
+### 3.9.1 (2022-10-17) ###
 
 - Client: Improved performance of GUI when someone joins or leaves a server (#2738).
   (contributed by @ann0see)
 
 - Client: Bugfix: Removed channel number from saved fader tag when `--ctrlmidich` is in use. In this release `--cleanuplegacyfadersettings` can be used on any saved fader settings that have been corrupted to attempt recovery (#2839).
   (contributed by @pljones)
+
+- Bugfix: Correct new channel not being shown to others if it connects with null channel info (#2754, #2774).
+  (contributed by @softins)
 
 - Server: Fixed --serverinfo country code misinterpretation introduced in Jamulus 3.9.0 on Qt6-based builds such as Mac (#2829).
   (contributed by @hoffie)
@@ -28,11 +30,22 @@
 - Windows: Upgraded JACK build to use JACK 1.9.21 (#2665).
   (contributed by @ann0see)
 
-- Translation: Added nb_NO App translation (#2849).
-  (contributed by @ann0see)
+- Translations have been updated (#2835, #2852, #2856, #2915):
+  (mainly translated on @weblate by multiple translators)
+  * Chinese, by @BLumia
+  * Dutch, by @henkdegroot
+  * French, by @trebmuh, @jujudusud, J. Lavoie
+  * German, by @ann0see, Hans Spoerer
+  * Korean, by @MarongHappy
+  * Norwegian Bokmål, by @comradekingu
+  * Polish, by @SeeLook
+  * Portuguese European, by @mansil
+  * Slovak, by @jose1711
+  * Spanish, by @ignotus666
+  * Swedish, by @tygyh, @comradekingu
 
-- Translations updated from Hosted Weblate (#2835, #2852).
-  (contributed by @weblate)
+- Translation: Added nb_NO App translation (#2849, #2852).
+  (contributed by @comradekingu, @ann0see)
 
 - Refactoring: Moved around files to clean up the repository (#2822, #2824, #2834, #2838).
   (contributed by @ann0see)
@@ -48,6 +61,9 @@
 
 - Build: Debian/Ubuntu: Renamed headless .deb file to `jamulus-headless_[version]_ubuntu_[arch].deb` for consistency with binary. This might need changes to scripts downloading this `.deb` file (#2821).
   (contributed by @ann0see)
+
+- Build: Debian/Ubuntu: Added .deb aarch64 (Raspberry) 64bit builds (#2895).
+  (contributed by @hoffie)
 
 - Build: Mac: Combined Intel & M1 builds into a single Universal binary and improved M1 -dev build user-friendliness by introducing ad-hoc signing support (#2808, #2825).
   (contributed by @hoffie)
@@ -1714,3 +1730,5 @@
 ### 0.9.1 (2006-01-28) ###
 
 - initial version
+
+<!-- vim: syntax=Markdown -->

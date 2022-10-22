@@ -209,10 +209,17 @@ jobs:
             base_command:           TARGET_ARCH=armhf ./.github/autobuild/linux_deb.sh
             run_codeql:             false
 
+          - config_name:            Linux .deb arm64 (artifacts)
+            target_os:              linux
+            building_on_os:         ubuntu-22.04
+            building_container:     ubuntu:18.04
+            base_command:           TARGET_ARCH=arm64 ./.github/autobuild/linux_deb.sh
+            run_codeql:             false
+
           - config_name:            MacOS (artifacts)
             target_os:              macos
             building_on_os:         macos-12
-            base_command:           QT_VERSION=6.3.2 SIGN_IF_POSSIBLE=1 TARGET_ARCHS="x86_64 arm64" ./.github/autobuild/mac.sh
+            base_command:           QT_VERSION=6.4.0 SIGN_IF_POSSIBLE=1 TARGET_ARCHS="x86_64 arm64" ./.github/autobuild/mac.sh
             # Disable CodeQL on mac as it interferes with signing the binaries (signing hangs, see #2563 and #2564)
             run_codeql:             false
             # Latest Xcode which runs on macos-11:
@@ -272,7 +279,7 @@ jobs:
     steps:
       - name:                       Select Xcode version for Mac
         if:                         matrix.config.target_os == 'macos' || matrix.config.target_os == 'ios'
-        uses:                       maxim-lobanov/setup-xcode@4aa4176a819ae7c019451acfda0bba67bffc6704
+        uses:                       maxim-lobanov/setup-xcode@df46f77a07b48da38239cd2fb8c0b5603c71e909
         with:
           xcode-version:            ${{ matrix.config.xcode_version }}
 
