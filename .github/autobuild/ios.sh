@@ -4,7 +4,7 @@ set -eu
 QT_DIR=/usr/local/opt/qt
 # The following version pinnings are semi-automatically checked for
 # updates. Verify .github/workflows/bump-dependencies.yaml when changing those manually:
-AQTINSTALL_VERSION=3.0.1
+AQTINSTALL_VERSION=3.0.2
 
 if [[ ! ${QT_VERSION:-} =~ [0-9]+\.[0-9]+\..* ]]; then
     echo "Environment variable QT_VERSION must be set to a valid Qt version"
@@ -49,7 +49,7 @@ pass_artifact_to_job() {
     local artifact="jamulus_${JAMULUS_BUILD_VERSION}_iOSUnsigned${ARTIFACT_SUFFIX:-}.ipa"
     echo "Moving build artifact to deploy/${artifact}"
     mv ./deploy/Jamulus.ipa "./deploy/${artifact}"
-    echo "::set-output name=artifact_1::${artifact}"
+    echo "artifact_1=${artifact}" >> "$GITHUB_OUTPUT"
 }
 
 case "${1:-}" in

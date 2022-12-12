@@ -20,8 +20,8 @@ $ChocoCacheDir = 'C:\ChocoCache'
 # updates. Verify .github/workflows/bump-dependencies.yaml when changing those manually:
 $Qt32Version = "5.15.2"
 $Qt64Version = "5.15.2"
-$AqtinstallVersion = "3.0.1"
-$JackVersion = "1.9.21.20220626"
+$AqtinstallVersion = "3.0.2"
+$JackVersion = "1.9.21.20221111"
 $Msvc32Version = "win32_msvc2019"
 $Msvc64Version = "win64_msvc2019_64"
 $JomVersion = "1.1.2"
@@ -150,8 +150,8 @@ Function Pass-Artifact-to-Job
     {
         throw "move failed with exit code $LastExitCode"
     }
-    echo "Setting Github step output name=artifact_1::${artifact}"
-    echo "::set-output name=artifact_1::${artifact}"
+    echo "Setting Github step output name=artifact_1 to ${artifact}"
+    echo "artifact_1=${artifact}" >> "$Env:GITHUB_OUTPUT"
 }
 
 switch ( $Stage )
