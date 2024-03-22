@@ -42,6 +42,7 @@
 #include "util.h"
 #include "serverlogging.h"
 #include "serverlist.h"
+#include "tcpserver.h"
 #include "recorder/jamcontroller.h"
 
 #include "threadpool.h"
@@ -275,6 +276,7 @@ protected:
 
     // actual working objects
     CHighPrioSocket Socket;
+    CTcpServer      TcpServer;
 
     // logging
     CServerLogging Logging;
