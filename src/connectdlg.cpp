@@ -143,12 +143,8 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     // make sure the connect button has the focus
     butConnect->setFocus();
 
-    // for "show all servers" mode make sort by click on header possible
-    if ( bShowCompleteRegList )
-    {
-        lvwServers->setSortingEnabled ( true );
-        lvwServers->sortItems ( 0, Qt::AscendingOrder );
-    }
+    lvwServers->setSortingEnabled ( true );
+    lvwServers->sortItems ( 2, Qt::DescendingOrder );
 
     // set a placeholder text to explain how to filter occupied servers (#397)
     edtFilter->setPlaceholderText ( tr ( "Filter text, or # for occupied servers" ) );
@@ -811,7 +807,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
     {
         // check if this is the first time a ping time is set
         const bool bIsFirstPing = pCurListViewItem->text ( 1 ).isEmpty();
-        bool       bDoSorting   = false;
 
         // update minimum ping time column (invisible, used for sorting) if
         // the new value is smaller than the old value
@@ -825,9 +820,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
             // we pad to a total of 8 characters with zeros to make sure the
             // sorting is done correctly
             pCurListViewItem->setText ( 4, QString ( "%1" ).arg ( iPingTime, 8, 10, QLatin1Char ( '0' ) ) );
-
-            // update the sorting (lowest number on top)
-            bDoSorting = true;
         }
 
         // for debugging it is good to see the current ping time in the list
@@ -877,11 +869,11 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
         }
         else if ( iNumClients >= pCurListViewItem->text ( 5 ).toInt() )
         {
-            pCurListViewItem->setText ( 2, QString().setNum ( iNumClients ) + " (full)" );
+            pCurListViewItem->setText ( 2, QString( "%1" ).arg ( iNumClients, 5, 10, QLatin1Char ( ' ' )  ) + " (full)" );
         }
         else
         {
-            pCurListViewItem->setText ( 2, QString().setNum ( iNumClients ) + "/" + pCurListViewItem->text ( 5 ) );
+            pCurListViewItem->setText ( 2, QString( "%1" ).arg ( iNumClients, 5, 10, QLatin1Char ( ' ' )  ) + "/" + pCurListViewItem->text ( 5 ) );
         }
 
         // check if the number of child list items matches the number of
@@ -895,18 +887,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
         if ( bIsFirstPing )
         {
             pCurListViewItem->setHidden ( false );
-        }
-
-        // Update sorting. Note that the sorting must be the last action for the
-        // current item since the topLevelItem(iIdx) is then no longer valid.
-        // To avoid that the list is sorted shortly before a double click (which
-        // could lead to connecting an incorrect server) the sorting is disabled
-        // as long as the mouse is over the list (but it is not disabled for the
-        // initial timer of about 2s, see TimerInitialSort) (#293).
-        if ( bDoSorting && !bShowCompleteRegList &&
-             ( TimerInitialSort.isActive() || !lvwServers->underMouse() ) ) // do not sort if "show all servers"
-        {
-            lvwServers->sortByColumn ( 4, Qt::AscendingOrder );
         }
     }
 
