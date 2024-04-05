@@ -34,6 +34,113 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         Q_UNUSED ( params );
     } );
 
+    /// @rpc_notification jamulusserver/clientConnected
+    /// @brief Emitted when a client has connected to the server.
+    /// @param {number} params.id - The channel ID assigned to the client.
+    /// @param {string} params.address - The client's address.
+    /// @param {number} params.totalChannels - Number of total channels connected to the server.
+    connect ( pServer, &CServer::ClientConnected, [=] ( const int iChanID, const QHostAddress RecHostAddr, const int iTotChans ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/clientConnected",
+                                            QJsonObject{
+                                                { "id", iChanID },
+                                                { "address", RecHostAddr.toString() },
+                                                { "totalChannels", iTotChans },
+                                            } );
+    } );
+
+    /// @rpc_notification jamulusserver/clientDisconnected
+    /// @brief Emitted when a client has disconnected from the server.
+    /// @param {number} params.id - The channel ID assigned to the client.
+    connect ( pServer, &CServer::ClientDisconnected, [=] ( const int iChanID ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/clientDisconnected",
+                                            QJsonObject{
+                                                { "id", iChanID },
+                                            } );
+    } );
+
+    /// @rpc_notification jamulusserver/chatMessageReceived
+    /// @brief Emitted when a chat message is received.
+    /// @param {string} params.chatMessage - Chat message text.
+    connect ( pServer, &CServer::receivedChatMessage, [=] ( const QString& strChatText ) {
+        pRpcServer->BroadcastNotification ( "jamulusserver/chatMessageReceived",
+                                            QJsonObject{
+                                                { "chatMessage", strChatText },
+                                            } );
+    } );
+
+    /// @rpc_method jamulusserver/broadcastChatMessage
+    /// @brief Sends a chat message to all connected clients.
+    /// @param {string} params.chatMessage - The chat message text.
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/broadcastChatMessage", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        auto jsonChatMessage = params["chatMessage"];
+        if ( !jsonChatMessage.isString() )
+        {
+            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatMessage is not a string" );
+            return;
+        }
+
+        pServer->CreateAndSendChatTextForAllConChannels ( jsonChatMessage.toString() );
+        response["result"] = "ok";
+    } );
+
+    /// @rpc_method jamulusserver/startStream
+    /// @brief Starts the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/startStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->startStream();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/stopStream
+    /// @brief Stops the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/stopStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->OnStopped();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/toggleStream
+    /// @brief Toggles the stream to autostart (or not) when a client joins the server.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/toggleStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->toggleActive();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/setStreamDestination
+    /// @brief Sets the stream destination.
+    /// @param {string} params.strStreamDestination - Stream destination to ffmpeg.
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/setStreamDestination", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->Init ( params["strStreamDestination"].toString() );
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/getStreamStatus
+    /// @brief Returns info about the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {boolean} result.streamStatus - streaming status.
+    /// @result {boolean} result.streamEnabled - stream enabled status.
+    /// @result {string} result.streamDestination - address of the streaming server.
+    pRpcServer->HandleMethod ( "jamulusserver/getStreamStatus", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonObject result{
+            { "streamStatus", pServer->pJamStreamer->getStreamStatus() },
+            { "streamEnabled", pServer->pJamStreamer->getStreamEnabled() },
+            { "streamDestination", pServer->pJamStreamer->getStreamDestination() },
+        };
+
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
+
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).
@@ -49,6 +156,66 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
             { "recordingDirectory", pServer->GetRecordingDir() },
         };
 
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/getClientDetails
+    /// @brief Returns the list of connected clients along with complete details about them.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {array} result.clients - The list of connected clients.
+    /// @result {number} result.clients[*].id - The client’s channel id.
+    /// @result {string} result.clients[*].address - The client’s address (ip:port).
+    /// @result {string} result.clients[*].name - The client’s name.
+    /// @result {string} result.clients[*].city - The client’s city.
+    /// @result {string} result.clients[*].country - The client’s country.
+    /// @result {string} result.clients[*].instr - The client’s instrument.
+    /// @result {string} result.clients[*].instrpic - The client’s instrument picture.
+    /// @result {string} result.clients[*].skill - The client’s skill.
+    /// @result {number} result.clients[*].jitterBufferSize - The client’s jitter buffer size.
+    /// @result {number} result.clients[*].channels - The number of audio channels of the client.
+    pRpcServer->HandleMethod ( "jamulusserver/getClientDetails", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonArray            clients;
+        CVector<CHostAddress> vecHostAddresses;
+        CVector<QString>      vecsName;
+        CVector<QString>      vecsCity;
+        CVector<QString>      vecsCountry;
+        CVector<QString>      vecsInstr;
+        CVector<QString>      vecsInstrPic;
+        CVector<QString>      vecsSkill;
+        CVector<int>          veciJitBufNumFrames;
+        CVector<int>          veciNetwFrameSizeFact;
+
+        pServer->GetCompleteClientInfos ( vecHostAddresses, vecsName, vecsCity, vecsCountry, vecsInstr, vecsInstrPic, vecsSkill,  veciJitBufNumFrames, veciNetwFrameSizeFact );
+
+        // we assume that all vectors have the same length
+        const int iNumChannels = vecHostAddresses.Size();
+
+        // fill list with connected clients
+        for ( int i = 0; i < iNumChannels; i++ )
+        {
+            if ( vecHostAddresses[i].InetAddr == QHostAddress ( static_cast<quint32> ( 0 ) ) )
+            {
+                continue;
+            }
+            QJsonObject client{
+                { "id", i },
+                { "address", vecHostAddresses[i].toString ( CHostAddress::SM_IP_PORT ) },
+                { "name", vecsName[i] },
+                { "city", vecsCity[i] },
+                { "country", vecsCountry[i] },
+                { "instr", vecsInstr[i] },
+                { "instrpic", vecsInstrPic[i] },
+                { "skill", vecsSkill[i] },
+                { "jitterBufferSize", veciJitBufNumFrames[i] },
+                { "channels", pServer->GetClientNumAudioChannels ( i ) },
+            };
+            clients.append ( client );
+        }
+        // create result object
+        QJsonObject result{
+            { "clients", clients },
+        };
         response["result"] = result;
         Q_UNUSED ( params );
     } );
