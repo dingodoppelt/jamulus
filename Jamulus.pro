@@ -1,4 +1,4 @@
-VERSION = 3.11.0dev
+VERSION = 3.11.0+
 
 # Using lrelease and embed_translations only works for Qt 5.12 or later.
 # See https://github.com/jamulussoftware/jamulus/pull/3288 for these changes.
@@ -393,7 +393,8 @@ HEADERS += src/buffer.h \
     src/recorder/jamrecorder.h \
     src/recorder/creaperproject.h \
     src/recorder/cwavestream.h \
-    src/signalhandler.h
+    src/signalhandler.h \
+    src/streamer/jamstreamer.h
 
 !contains(CONFIG, "serveronly") {
     HEADERS += src/client.h \
@@ -500,7 +501,8 @@ SOURCES += src/buffer.cpp \
     src/util.cpp \
     src/recorder/jamrecorder.cpp \
     src/recorder/creaperproject.cpp \
-    src/recorder/cwavestream.cpp
+    src/recorder/cwavestream.cpp \
+    src/streamer/jamstreamer.cpp
 
 !contains(CONFIG, "serveronly") {
     SOURCES += src/client.cpp \
