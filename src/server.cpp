@@ -1228,8 +1228,6 @@ void CServer::MixStream ( const int iNumClients )
                         // left/right channel
                         vecfIntermProcBuf[k]     += vecsData[i];
                         vecfIntermProcBuf[k + 1] += vecsData[i];
-                        vecsSendData[k] = Float2Short ( vecfIntermProcBuf[k] );
-                        vecsSendData[k + 1] = Float2Short ( vecfIntermProcBuf[k + 1] );
                     }
                 }
                 else
@@ -1238,10 +1236,13 @@ void CServer::MixStream ( const int iNumClients )
                     for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
                     {
                         vecfIntermProcBuf[i] += vecsData[i];
-                        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
-                        vecsSendData[i + 1] = Float2Short ( vecfIntermProcBuf[i + 1] );
                     }
                 }
+    }
+
+    for (i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
+    {
+        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
     }
 
     emit StreamFrame ( iServerFrameSizeSamples, vecsSendData );
