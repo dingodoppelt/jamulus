@@ -95,6 +95,23 @@ Results:
 | result | string | "ok" on success |
 
 
+### jamulus/getAvailableMethods
+
+Returns all available rpc methods.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.methods | array | All available methods. |
+
+
 ### jamulus/getMode
 
 Returns the current mode, i.e. whether Jamulus is running as a server or client.
@@ -203,6 +220,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusclient/setMuted
+
+Mutes or unmutes the client.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.muted | boolean | muted (true or false). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusclient/setName
 
 Sets your name.
@@ -235,6 +269,50 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "ok". |
+
+
+### jamulusserver/broadcastChatMessage
+
+Sends a chat message to all connected clients.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.chatMessage | string | The chat message text. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+### jamulusserver/getClientDetails
+
+Returns the list of connected clients along with complete details about them.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.clients | array | The list of connected clients. |
+| result.clients[*].id | number | The client’s channel id. |
+| result.clients[*].address | string | The client’s address (ip:port). |
+| result.clients[*].name | string | The client’s name. |
+| result.clients[*].city | string | The client’s city. |
+| result.clients[*].country | string | The client’s country. |
+| result.clients[*].instr | string | The client’s instrument. |
+| result.clients[*].instrpic | string | The client’s instrument picture. |
+| result.clients[*].skill | string | The client’s skill. |
+| result.clients[*].jitterBufferSize | number | The client’s jitter buffer size. |
+| result.clients[*].channels | number | The number of audio channels of the client. |
 
 
 ### jamulusserver/getClients
@@ -306,6 +384,25 @@ Results:
 | result.registrationStatus | string | The server registration status as string (see ESvrRegStatus and SerializeRegistrationStatus). |
 
 
+### jamulusserver/getStreamStatus
+
+Returns info about the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.streamStatus | boolean | streaming status. |
+| result.streamEnabled | boolean | stream enabled status. |
+| result.streamDestination | string | address of the streaming server. |
+
+
 ### jamulusserver/restartRecording
 
 Restarts the recording into a new directory.
@@ -357,6 +454,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusserver/setStreamDestination
+
+Sets the stream destination.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.strStreamDestination | string | Stream destination to ffmpeg. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusserver/setWelcomeMessage
 
 Sets the server welcome message.
@@ -391,6 +505,23 @@ Results:
 | result | string | Always "acknowledged".   To check if the recording was enabled, call `jamulusserver/getRecorderStatus` again. |
 
 
+### jamulusserver/startStream
+
+Starts the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusserver/stopRecording
 
 Stops the server recording.
@@ -406,6 +537,40 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "acknowledged".   To check if the recording was disabled, call `jamulusserver/getRecorderStatus` again. |
+
+
+### jamulusserver/stopStream
+
+Stops the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+### jamulusserver/toggleStream
+
+Toggles the stream to autostart (or not) when a client joins the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
 
 
 ## Notification reference
@@ -469,5 +634,40 @@ Parameters:
 | Name | Type | Description |
 | --- | --- | --- |
 | params | object | No parameters (empty object). |
+
+
+### jamulusserver/chatMessageReceived
+
+Emitted when a chat message is received.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.chatMessage | string | Chat message text. |
+
+
+### jamulusserver/clientConnected
+
+Emitted when a client has connected to the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.id | number | The channel ID assigned to the client. |
+| params.address | string | The client's address. |
+| params.totalChannels | number | Number of total channels connected to the server. |
+
+
+### jamulusserver/clientDisconnected
+
+Emitted when a client has disconnected from the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.id | number | The channel ID assigned to the client. |
 
 

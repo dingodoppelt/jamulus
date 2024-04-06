@@ -43,6 +43,7 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "streamer/jamstreamer.h"
 
 #include "threadpool.h"
 
@@ -169,6 +170,19 @@ public:
     void SetEnableDelayPanning ( bool bDelayPanningOn ) { bDelayPan = bDelayPanningOn; }
     bool IsDelayPanningEnabled() { return bDelayPan; }
 
+    virtual void CreateAndSendChatTextForAllConChannels ( const QString& strChatText );
+    void GetCompleteClientInfos ( CVector<CHostAddress>& vecHostAddresses,
+                               CVector<QString>&      vecsName,
+                               CVector<QString>&      vecsCity,
+                               CVector<QString>&      vecsCountry,
+                               CVector<QString>&      vecsInstr,
+                               CVector<QString>&      vecsInstrPic,
+                               CVector<QString>&      vecsSkill,
+                               CVector<int>&          veciJitBufNumFrames,
+                               CVector<int>&          veciNetwFrameSizeFact );
+
+    streamer::CJamStreamer* pJamStreamer;
+
 protected:
     // access functions for actual channels
     bool IsConnected ( const int iChanNum ) { return vecChannels[iChanNum].IsConnected(); }
@@ -203,6 +217,8 @@ protected:
     void DecodeReceiveData ( const int iChanCnt, const int iNumClients );
 
     void MixEncodeTransmitData ( const int iChanCnt, const int iNumClients );
+
+    void MixStream ( const int iNumClients );
 
     virtual void customEvent ( QEvent* pEvent );
 
@@ -312,6 +328,8 @@ signals:
     void Started();
     void Stopped();
     void ClientDisconnected ( const int iChID );
+    void ClientConnected ( const int iChID, const QHostAddress RecHostAddr, const int iTotChans );
+    void receivedChatMessage ( const QString& strChatText );
     void SvrRegStatusChanged();
     void AudioFrame ( const int              iChID,
                       const QString          stChName,
@@ -319,7 +337,11 @@ signals:
                       const int              iNumAudChan,
                       const CVector<int16_t> vecsData );
 
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
+
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t> data );
 
     // pass through from jam controller
     void RestartRecorder();

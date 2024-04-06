@@ -274,6 +274,7 @@ public:
     // settings
     CChannelCoreInfo ChannelInfo;
     QString          strClientName;
+    void OnRPCInMuteMyself ( bool bMute ) { OnControllerInMuteMyself ( bMute ); }
 
 protected:
     // callback function must be static, otherwise it does not work
