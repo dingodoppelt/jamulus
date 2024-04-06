@@ -288,6 +288,33 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusserver/getClientDetails
+
+Returns the list of connected clients along with complete details about them.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.clients | array | The list of connected clients. |
+| result.clients[*].id | number | The client’s channel id. |
+| result.clients[*].address | string | The client’s address (ip:port). |
+| result.clients[*].name | string | The client’s name. |
+| result.clients[*].city | string | The client’s city. |
+| result.clients[*].country | string | The client’s country. |
+| result.clients[*].instr | string | The client’s instrument. |
+| result.clients[*].instrpic | string | The client’s instrument picture. |
+| result.clients[*].skill | string | The client’s skill. |
+| result.clients[*].jitterBufferSize | number | The client’s jitter buffer size. |
+| result.clients[*].channels | number | The number of audio channels of the client. |
+
+
 ### jamulusserver/getClients
 
 Returns the list of connected clients along with details about them.
@@ -313,33 +340,6 @@ Results:
 | result.clients[*].city | string | The city name provided by the user for this channel. |
 | result.clients[*].countryName | number | The text name of the country specified by the user for this channel (see QLocale::Country). |
 | result.clients[*].skillLevelCode | number | The skill level id provided by the user for this channel. |
-
-
-### jamulusserver/getCompleteClientInfo
-
-Returns the list of connected clients along with complete details about them.
-
-Parameters:
-
-| Name | Type | Description |
-| --- | --- | --- |
-| params | object | No parameters (empty object). |
-
-Results:
-
-| Name | Type | Description |
-| --- | --- | --- |
-| result.clients | array | The list of connected clients. |
-| result.clients[*].id | number | The client’s channel id. |
-| result.clients[*].address | string | The client’s address (ip:port). |
-| result.clients[*].name | string | The client’s name. |
-| result.clients[*].city | string | The client’s city. |
-| result.clients[*].country | string | The client’s country. |
-| result.clients[*].instr | string | The client’s instrument. |
-| result.clients[*].instrpic | string | The client’s instrument picture. |
-| result.clients[*].skill | string | The client’s skill. |
-| result.clients[*].jitterBufferSize | number | The client’s jitter buffer size. |
-| result.clients[*].channels | number | The number of audio channels of the client. |
 
 
 ### jamulusserver/getRecorderStatus
