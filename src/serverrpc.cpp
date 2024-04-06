@@ -83,7 +83,7 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         pServer->CreateAndSendChatTextForAllConChannels ( jsonChatMessage.toString() );
         response["result"] = "ok";
     } );
-
+#ifndef _WIN32
     /// @rpc_method jamulusserver/startStream
     /// @brief Starts the stream.
     /// @param {object} params - No parameters (empty object).
@@ -140,7 +140,7 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         response["result"] = result;
         Q_UNUSED ( params );
     } );
-
+#endif
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).

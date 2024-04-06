@@ -180,8 +180,9 @@ public:
                                CVector<QString>&      vecsSkill,
                                CVector<int>&          veciJitBufNumFrames,
                                CVector<int>&          veciNetwFrameSizeFact );
-
+#ifndef _WIN32
     streamer::CJamStreamer* pJamStreamer;
+#endif
 
 protected:
     // access functions for actual channels
