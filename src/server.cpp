@@ -218,7 +218,16 @@ CServer::CServer ( const int          iNewMaxNumChan,
     // that jam recorder needs the frame size which is given to the jam
     // recorder in the SetRecordingDir() function)
     SetRecordingDir ( strRecordingDirName );
-
+#ifndef _WIN32
+    // enable jam streaming
+    QThread* pthJamStreamer = new QThread;
+    pJamStreamer = new streamer::CJamStreamer();
+    pJamStreamer->moveToThread(pthJamStreamer);
+    QObject::connect( this, &CServer::Started, pJamStreamer, &streamer::CJamStreamer::OnStarted );
+    QObject::connect( this, &CServer::Stopped, pJamStreamer, &streamer::CJamStreamer::OnStopped );
+    QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
+    pthJamStreamer->start();
+#endif
     // enable all channels (for the server all channel must be enabled the
     // entire life time of the software)
     for ( i = 0; i < iMaxNumChannels; i++ )
@@ -451,6 +460,8 @@ void CServer::OnNewConnection ( int iChID, int iTotChans, CHostAddress RecHostAd
 
     // logging of new connected channel
     Logging.AddNewConnection ( RecHostAddr.InetAddr, iTotChans );
+
+    emit ClientConnected ( iChID, RecHostAddr.InetAddr, iTotChans );
 }
 
 void CServer::OnServerFull ( CHostAddress RecHostAddr )
@@ -477,7 +488,9 @@ void CServer::OnCLDisconnection ( CHostAddress InetAddr )
     if ( iCurChanID != INVALID_CHANNEL_ID )
     {
         vecChannels[iCurChanID].Disconnect();
+        return;
     }
+    emit ClientDisconnected ( iCurChanID );
 }
 
 void CServer::OnAboutToQuit()
@@ -652,6 +665,12 @@ void CServer::OnTimer()
         // calculate levels for all connected clients
         const bool bSendChannelLevels = CreateLevelsForAllConChannels ( iNumClients, vecNumAudioChannels, vecvecsData, vecChannelLevels );
 
+        MixStream ( iNumClients );
+#ifndef _WIN32
+        if ( pJamStreamer->bInitialized() ) {
+            MixStream ( iNumClients );
+        }
+#endif
         for ( int iChanCnt = 0; iChanCnt < iNumClients; iChanCnt++ )
         {
             // get actual ID of current channel
@@ -1183,6 +1202,50 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
     Q_UNUSED ( iUnused )
 }
 
+/// @brief Mix the audio data from all clients and send the mix to the jamstreamer
+void CServer::MixStream ( const int iNumClients )
+{
+    int               i, j, k;
+    CVector<float>&   vecfIntermProcBuf = vecvecfIntermediateProcBuf[0];
+    CVector<int16_t>& vecsSendData      = vecvecsSendData[0];            // use reference for faster access
+
+    // init intermediate processing vector with zeros since we mix all channels on that vector
+    vecfIntermProcBuf.Reset ( 0 );
+    vecsSendData.Reset ( 0 );
+
+    // Stereo target channel -----------------------------------------------
+    for ( j = 0; j < iNumClients; j++ )
+    {
+        // get a reference to the audio data of the current client
+        const CVector<int16_t>& vecsData = vecvecsData[j];
+
+        if ( vecNumAudioChannels[j] == 1 )
+                {
+                    // mono: copy same mono data in both out stereo audio channels
+                    for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
+                    {
+                        // left/right channel
+                        vecfIntermProcBuf[k]     += vecsData[i];
+                        vecfIntermProcBuf[k + 1] += vecsData[i];
+                        vecsSendData[k] = Float2Short ( vecfIntermProcBuf[k] );
+                        vecsSendData[k + 1] = Float2Short ( vecfIntermProcBuf[k + 1] );
+                    }
+                }
+                else
+                {
+                    // stereo
+                    for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
+                    {
+                        vecfIntermProcBuf[i] += vecsData[i];
+                        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
+                        vecsSendData[i + 1] = Float2Short ( vecfIntermProcBuf[i + 1] );
+                    }
+                }
+    }
+
+    emit StreamFrame ( iServerFrameSizeSamples, vecsSendData );
+}
+
 CVector<CChannelInfo> CServer::CreateChannelList()
 {
     CVector<CChannelInfo> vecChanInfo ( 0 );
@@ -1253,6 +1316,22 @@ void CServer::CreateAndSendChatTextForAllConChannels ( const int iCurChanID, con
             vecChannels[i].CreateChatTextMes ( strActualMessageText );
         }
     }
+    emit receivedChatMessage( strActualMessageText );
+}
+
+// external chat
+void CServer::CreateAndSendChatTextForAllConChannels ( const QString& strChatText )
+{
+    // Send chat text to all connected clients ---------------------------------
+    for ( int i = 0; i < iMaxNumChannels; i++ )
+    {
+        if ( vecChannels[i].IsConnected() )
+        {
+            // send message
+            vecChannels[i].CreateChatTextMes ( strChatText );
+        }
+    }
+    emit receivedChatMessage( strChatText );
 }
 
 void CServer::CreateAndSendRecorderStateForAllConChannels()
@@ -1516,6 +1595,68 @@ void CServer::SetWelcomeMessage ( const QString& strNWelcMess )
 
     // restrict welcome message to maximum allowed length
     strWelcomeMessage = strWelcomeMessage.left ( MAX_LEN_CHAT_TEXT );
+}
+
+void CServer::GetCompleteClientInfos ( CVector<CHostAddress>& vecHostAddresses,
+                               CVector<QString>&      vecsName,
+                               CVector<QString>&      vecsCity,
+                               CVector<QString>&      vecsCountry,
+                               CVector<QString>&      vecsInstr,
+                               CVector<QString>&      vecsInstrPic,
+                               CVector<QString>&      vecsSkill,
+                               CVector<int>&          veciJitBufNumFrames,
+                               CVector<int>&          veciNetwFrameSizeFact )
+{
+    // init return values
+    vecHostAddresses.Init ( iMaxNumChannels );
+    vecsName.Init ( iMaxNumChannels );
+    vecsCity.Init ( iMaxNumChannels );
+    vecsCountry.Init ( iMaxNumChannels );
+    vecsInstr.Init ( iMaxNumChannels );
+    vecsInstrPic.Init ( iMaxNumChannels );
+    vecsSkill.Init ( iMaxNumChannels );
+    veciJitBufNumFrames.Init ( iMaxNumChannels );
+    veciNetwFrameSizeFact.Init ( iMaxNumChannels );
+
+    // check all possible channels
+    for ( int i = 0; i < iMaxNumChannels; i++ )
+    {
+        if ( vecChannels[i].IsConnected() )
+        {
+            // get requested data
+            vecHostAddresses[i]      = vecChannels[i].GetAddress();
+            vecsName[i]              = vecChannels[i].GetName();
+            vecsCity[i]              = vecChannels[i].GetChanInfo().strCity;
+            vecsCountry[i]           = QLocale::countryToString(vecChannels[i].GetChanInfo().eCountry);
+            vecsInstr[i]             = CInstPictures::GetName(vecChannels[i].GetChanInfo().iInstrument);
+            vecsInstrPic[i]          = CInstPictures::GetResourceReference(vecChannels[i].GetChanInfo().iInstrument);
+            vecsSkill[i]             = "";
+            veciJitBufNumFrames[i]   = vecChannels[i].GetSockBufNumFrames();
+            veciNetwFrameSizeFact[i] = vecChannels[i].GetNetwFrameSizeFact();
+            switch ( vecChannels[i].GetChanInfo().eSkillLevel )
+            {
+                case SL_BEGINNER:
+                    vecsSkill[i] = "\"Beginner\"";
+                    break;
+
+                case SL_INTERMEDIATE:
+                    vecsSkill[i] = "\"Intermediate\"";
+                    break;
+
+                case SL_PROFESSIONAL:
+                    vecsSkill[i] = "\"Expert\"";
+                    break;
+
+                case SL_NOT_SET:
+                    vecsSkill[i] = "";
+                    break;
+
+                default:
+                    vecsSkill[i] = "";
+                    break;
+            }
+        }
+    }
 }
 
 void CServer::WriteHTMLChannelList()

@@ -110,6 +110,7 @@ int main ( int argc, char** argv )
     QString      strRecordingDirName         = "";
     QString      strDirectoryAddress         = "";
     QString      strServerListFileName       = "";
+    QString      strStreamDest               = "";
     QString      strServerInfo               = "";
     QString      strServerPublicIP           = "";
     QString      strServerBindIP             = "";
@@ -578,6 +579,291 @@ int main ( int argc, char** argv )
             CommandLineOptions << "--showanalyzerconsole";
             ClientOnlyOptions << "--showanalyzerconsole";
             continue;
+        }
+
+        // Controller MIDI channel ---------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--ctrlmidich", // no short form
+                                 "--ctrlmidich",
+                                 strArgument ) )
+        {
+            strMIDISetup = strArgument;
+            qInfo() << qUtf8Printable( QString( "- MIDI controller settings: %1" )
+                .arg( strMIDISetup ) );
+            CommandLineOptions << "--ctrlmidich";
+            continue;
+        }
+
+
+        // Use logging ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-l",
+                                 "--log",
+                                 strArgument ) )
+        {
+            strLoggingFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- logging file name: %1" )
+                .arg( strLoggingFileName ) );
+            CommandLineOptions << "--log";
+            continue;
+        }
+
+
+        // Port number ---------------------------------------------------------
+        if ( GetNumericArgument ( argc,
+                                  argv,
+                                  i,
+                                  "-p",
+                                  "--port",
+                                  0,
+                                  65535,
+                                  rDbleArgument ) )
+        {
+            iPortNumber            = static_cast<quint16> ( rDbleArgument );
+            bCustomPortNumberGiven = true;
+            qInfo() << qUtf8Printable( QString( "- selected port number: %1" )
+                .arg( iPortNumber ) );
+            CommandLineOptions << "--port";
+            continue;
+        }
+
+
+        // HTML status file ----------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-m",
+                                 "--htmlstatus",
+                                 strArgument ) )
+        {
+            strHTMLStatusFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- HTML status file name: %1" )
+                .arg( strHTMLStatusFileName ) );
+            CommandLineOptions << "--htmlstatus";
+            continue;
+        }
+
+
+        // Client Name ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--clientname", // no short form
+                                 "--clientname",
+                                 strArgument ) )
+        {
+            strClientName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- client name: %1" )
+                .arg( strClientName ) );
+            CommandLineOptions << "--clientname";
+            continue;
+        }
+
+
+        // Recording directory -------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-R",
+                                 "--recording",
+                                 strArgument ) )
+        {
+            strRecordingDirName = strArgument;
+            qInfo() << qUtf8Printable( QString("- recording directory name: %1" )
+                .arg( strRecordingDirName ) );
+            CommandLineOptions << "--recording";
+            continue;
+        }
+
+
+        // Stream destination ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--streamto", // no short form
+                                 "--streamto",
+                                 strArgument ) )
+        {
+            strStreamDest = strArgument;
+            qInfo() << qUtf8Printable( QString( "- stream destination: %1" )
+                .arg( strStreamDest ) );
+            CommandLineOptions << "--streamto";
+            continue;
+        }
+
+
+        // Disable recording on startup ----------------------------------------
+        if ( GetFlagArgument ( argv,
+                               i,
+                               "--norecord", // no short form
+                               "--norecord" ) )
+        {
+            bDisableRecording = true;
+            qInfo() << "- recording will not be enabled";
+            CommandLineOptions << "--norecord";
+            continue;
+        }
+
+
+        // Central server ------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-e",
+                                 "--centralserver",
+                                 strArgument ) )
+        {
+            strCentralServer = strArgument;
+            qInfo() << qUtf8Printable( QString( "- central server: %1" )
+                .arg( strCentralServer ) );
+            CommandLineOptions << "--centralserver";
+            continue;
+        }
+
+
+        // Server Public IP --------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--serverpublicip", // no short form
+                                 "--serverpublicip",
+                                 strArgument ) )
+        {
+            strServerPublicIP = strArgument;
+            qInfo() << qUtf8Printable( QString( "- server public IP: %1" )
+                .arg( strServerPublicIP ) );
+            CommandLineOptions << "--serverpublicip";
+            continue;
+        }
+
+
+        // Server info ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-o",
+                                 "--serverinfo",
+                                 strArgument ) )
+        {
+            strServerInfo = strArgument;
+            qInfo() << qUtf8Printable( QString( "- server info: %1" )
+                .arg( strServerInfo ) );
+            CommandLineOptions << "--serverinfo";
+            continue;
+        }
+
+
+        // Server list filter --------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-f",
+                                 "--listfilter",
+                                 strArgument ) )
+        {
+            strServerListFilter = strArgument;
+            qInfo() << qUtf8Printable( QString( "- server list filter: %1" )
+                .arg( strServerListFilter ) );
+            CommandLineOptions << "--listfilter";
+            continue;
+        }
+
+
+        // Server welcome message ----------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-w",
+                                 "--welcomemessage",
+                                 strArgument ) )
+        {
+            strWelcomeMessage = strArgument;
+            qInfo() << qUtf8Printable( QString( "- welcome message: %1" )
+                .arg( strWelcomeMessage ) );
+            CommandLineOptions << "--welcomemessage";
+            continue;
+        }
+
+
+        // Initialization file -------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-i",
+                                 "--inifile",
+                                 strArgument ) )
+        {
+            strIniFileName = strArgument;
+            qInfo() << qUtf8Printable( QString( "- initialization file name: %1" )
+                .arg( strIniFileName ) );
+            CommandLineOptions << "--inifile";
+            continue;
+        }
+
+
+        // Connect on startup --------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "-c",
+                                 "--connect",
+                                 strArgument ) )
+        {
+            strConnOnStartupAddress = NetworkUtil::FixAddress ( strArgument );
+            qInfo() << qUtf8Printable( QString( "- connect on startup to address: %1" )
+                .arg( strConnOnStartupAddress ) );
+            CommandLineOptions << "--connect";
+            continue;
+        }
+
+
+        // Mute stream on startup ----------------------------------------------
+        if ( GetFlagArgument ( argv,
+                               i,
+                               "-M",
+                               "--mutestream" ) )
+        {
+            bMuteStream = true;
+            qInfo() << "- mute stream activated";
+            CommandLineOptions << "--mutestream";
+            continue;
+        }
+
+
+        // For headless client mute my own signal in personal mix --------------
+        if ( GetFlagArgument ( argv,
+                               i,
+                               "--mutemyown", // no short form
+                               "--mutemyown" ) )
+        {
+            bMuteMeInPersonalMix = true;
+            qInfo() << "- mute me in my personal mix";
+            CommandLineOptions << "--mutemyown";
+            continue;
+        }
+
+
+        // Version number ------------------------------------------------------
+        if ( ( !strcmp ( argv[i], "--version" ) ) ||
+             ( !strcmp ( argv[i], "-v" ) ) )
+        {
+            qCritical() << qUtf8Printable( GetVersionAndNameStr ( false ) );
+            exit ( 1 );
+        }
+
+
+        // Help (usage) flag ---------------------------------------------------
+        if ( ( !strcmp ( argv[i], "--help" ) ) ||
+             ( !strcmp ( argv[i], "-h" ) ) ||
+             ( !strcmp ( argv[i], "-?" ) ) )
+        {
+            const QString strHelp = UsageArguments ( argv );
+            qInfo() << qUtf8Printable( strHelp );
+            exit ( 0 );
         }
 
         // Unknown option ------------------------------------------------------
