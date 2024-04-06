@@ -1,4 +1,4 @@
-### 3.11.0dev <- NOTE: the release version number will be 3.12.0 ###
+### 3.11.0+ <- NOTE: the release version number will be 3.12.0 ###
 
 - Client: Added "Delete Entry" button to Advanced Settings, Custom Directories (#3260).
   (contributed by @AdamGLIN)
@@ -110,7 +110,6 @@
 
 - Autobuild: Use notarytool instead of action for macOS notarization (#3352).
   (contributed by @ann0see)
-
 
 ### 3.10.0 (2023-09-03) ###
 
