@@ -629,7 +629,7 @@ void CProtocol::CreateAndImmSendConLessMessage ( const int               iID,
     GenMessageFrame ( vecNewMessage, 0, iID, vecData );
 
     // immediately send message
-    emit CLMessReadyForSending ( InetAddr, vecNewMessage, pTcpConnection );
+    emit CLMessReadyForSending ( InetAddr, vecNewMessage, pTcpConnection, bUseTcpClient );
 }
 
 void CProtocol::ParseMessageBody ( const CVector<uint8_t>& vecbyMesBodyData, const int iRecCounter, const int iRecID )
