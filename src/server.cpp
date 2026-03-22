@@ -496,7 +496,7 @@ void CServer::OnSendCLProtMessage ( CHostAddress InetAddr, CVector<uint8_t> vecM
     if ( pTcpConnection )
     {
         // send to the connected socket directly
-        pTcpConnection->pTcpSocket->write ( (const char*) &( (CVector<uint8_t>) vecMessage )[0], vecMessage.Size() );
+        pTcpConnection->write ( (const char*) &( (CVector<uint8_t>) vecMessage )[0], vecMessage.Size() );
     }
     else
     {
