@@ -479,7 +479,7 @@ signals:
 
     void CLRedServerListReceived ( CHostAddress InetAddr, CVector<CServerInfo> vecServerInfo );
 
-    void CLTcpSupported ( CHostAddress InetAddr );
+    void CLTcpSupported ( CHostAddress InetAddr, int iID );
 
     void CLConnClientsListMesReceived ( CHostAddress InetAddr, CVector<CChannelInfo> vecChanInfo );
 
