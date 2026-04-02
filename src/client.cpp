@@ -1065,6 +1065,8 @@ void CClient::OnRawAudioSupported()
 
 void CClient::OnCLTcpSupported ( CHostAddress InetAddr, int iID )
 {
+    qDebug() << "- TCP supported at server" << InetAddr.toString() << "for ID =" << iID;
+
     if ( iID != PROTMESSID_CLM_CLIENT_ID )
     {
         emit CLTcpSupported ( InetAddr, iID ); // pass to connect dialog
