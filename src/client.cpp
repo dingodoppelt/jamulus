@@ -1070,6 +1070,7 @@ void CClient::OnCLTcpSupported ( CHostAddress InetAddr, int iID )
     if ( iID != PROTMESSID_CLM_CLIENT_ID )
     {
         emit CLTcpSupported ( InetAddr, iID ); // pass to connect dialog
+        return;
     }
 
     // if client ID already received, make TCP connection to server
