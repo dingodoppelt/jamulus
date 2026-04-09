@@ -258,7 +258,8 @@ void CClient::OnSendCLProtMessage ( CHostAddress InetAddr, CVector<uint8_t> vecM
 {
     if ( pTcpConnection )
     {
-        qWarning() << "Client send cannot use TCP server";
+        // already have TCP connection - just send and return
+        pTcpConnection->write ( (const char*) &( (CVector<uint8_t>) vecMessage )[0], vecMessage.Size() );
         return;
     }
 
@@ -287,6 +288,7 @@ void CClient::OnSendCLProtMessage ( CHostAddress InetAddr, CVector<uint8_t> vecM
             CTcpConnection* pTcpConnection = new CTcpConnection ( pSocket,
                                                                   InetAddr,
                                                                   nullptr,
+                                                                  this,
                                                                   &Channel,
                                                                   eProtoMode == PROTO_TCP_LONG ); // client connection, will self-delete on disconnect
 
