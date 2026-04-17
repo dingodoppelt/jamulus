@@ -1236,7 +1236,9 @@ void CClient::Init()
     vecbyNetwData.Init ( iCeltNumCodedBytes );
 
     // set the channel network properties
-    Channel.SetAudioStreamProperties ( eAudioCompressionType, iCeltNumCodedBytes, iSndCrdFrameSizeFactor, iNumAudioChannels );
+    // Channel.SetAudioStreamProperties ( eAudioCompressionType, iCeltNumCodedBytes, iSndCrdFrameSizeFactor, iNumAudioChannels );
+    int iRawBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof(int16_t);
+    Channel.SetAudioStreamProperties ( eAudioCompressionType, iRawBytes, iSndCrdFrameSizeFactor, iNumAudioChannels );
 
     // init reverberation
     AudioReverb.Init ( eAudioChannelConf, iStereoBlockSizeSam, SYSTEM_SAMPLE_RATE_HZ );
@@ -1389,24 +1391,14 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         }
     }
 
-    for ( i = 0, j = 0; i < iSndCrdFrameSizeFactor; i++, j += iNumAudioChannels * iOPUSFrameSizeSamples )
-    {
-        // OPUS encoding
-        if ( CurOpusEncoder != nullptr )
-        {
-            if ( bMuteOutStream )
-            {
-                iUnused = opus_custom_encode ( CurOpusEncoder, &vecZeros[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
-            }
-            else
-            {
-                iUnused = opus_custom_encode ( CurOpusEncoder, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
-            }
-        }
+    // Ersetze deine TX-Loop (Zeile 1392-1409):
 
-        // send coded audio through the network
-        Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
-    }
+    // HACK: Send raw samples instead of OPUS
+    int iRawSampleBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof(int16_t);
+
+    // Nur EINEN Loop-Durchgang - nicht mit iSndCrdFrameSizeFactor!
+    memcpy ( &vecCeltData[0], &vecsStereoSndCrd[0], iRawSampleBytes );
+    Channel.PrepAndSendPacket ( &Socket, vecCeltData, iRawSampleBytes );
 
     // Receive signal ----------------------------------------------------------
     // in case of mute stream, store local data
@@ -1415,33 +1407,23 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         vecsStereoSndCrdMuteStream = vecsStereoSndCrd;
     }
 
-    for ( i = 0, j = 0; i < iSndCrdFrameSizeFactor; i++, j += iNumAudioChannels * iOPUSFrameSizeSamples )
+    // Ersetze deine RX-Loop komplett (Zeile 1418-1445):
+
+    // HACK: Receive raw samples instead of OPUS
+
+    // Nur EINEN GetData() Call - nicht in einer Loop mit iSndCrdFrameSizeFactor!
+    const bool bReceiveDataOk = ( Channel.GetData ( vecbyNetwData, iRawSampleBytes ) == GS_BUFFER_OK );
+
+    if ( bReceiveDataOk )
     {
-        // receive a new block
-        const bool bReceiveDataOk = ( Channel.GetData ( vecbyNetwData, iCeltNumCodedBytes ) == GS_BUFFER_OK );
-
-        // get pointer to coded data and manage the flags
-        if ( bReceiveDataOk )
-        {
-            pCurCodedData = &vecbyNetwData[0];
-
-            // on any valid received packet, we clear the initialization phase flag
-            bIsInitializationPhase = false;
-        }
-        else
-        {
-            // for lost packets use null pointer as coded input data
-            pCurCodedData = nullptr;
-
-            // invalidate the buffer OK status flag
-            bJitterBufferOK = false;
-        }
-
-        // OPUS decoding
-        if ( CurOpusDecoder != nullptr )
-        {
-            iUnused = opus_custom_decode ( CurOpusDecoder, pCurCodedData, iCeltNumCodedBytes, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples );
-        }
+        // Kopiere ALLE Samples in den Buffer
+        memcpy ( &vecsStereoSndCrd[0], &vecbyNetwData[0], iRawSampleBytes );
+        bIsInitializationPhase = false;
+    }
+    else
+    {
+        memset ( &vecsStereoSndCrd[0], 0, iRawSampleBytes );
+        bJitterBufferOK = false;
     }
 
     // for muted stream we have to add our local data here

@@ -538,6 +538,14 @@ EPutDataStat CChannel::PutAudioData ( const CVector<uint8_t>& vecbyData, const i
     {
         MutexSocketBuf.lock();
         {
+            // // DEBUG
+            // static int iLastSize = -1;
+            // if ( iNumBytes != iLastSize )
+            // {
+            //     qDebug() << "RX Paketgröße:" << iNumBytes << "Erwartet:" << ( iNetwFrameSize * iNetwFrameSizeFact )
+            //             << "iNetwFrameSize=" << iNetwFrameSize << "iNetwFrameSizeFact=" << iNetwFrameSizeFact;
+            //     iLastSize = iNumBytes;
+            // }
             // only process audio if packet has correct size
             if ( iNumBytes == ( iNetwFrameSize * iNetwFrameSizeFact ) )
             {
