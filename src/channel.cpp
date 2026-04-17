@@ -23,6 +23,7 @@
 \******************************************************************************/
 
 #include "channel.h"
+#include "util.h"
 
 // CChannel implementation *****************************************************
 CChannel::CChannel ( const bool bNIsServer ) :
@@ -194,7 +195,7 @@ void CChannel::SetAudioStreamProperties ( const EAudComprType eNewAudComprType,
         {
             iAudioFrameSizeSamples = DOUBLE_SYSTEM_FRAME_SIZE_SAMPLES;
         }
-        else
+        else if ( eAudioCompressionType == CT_OPUS64 )
         {
             iAudioFrameSizeSamples = SYSTEM_FRAME_SIZE_SAMPLES;
         }
@@ -437,7 +438,7 @@ void CChannel::OnNetTranspPropsReceived ( CNetworkTransportProps NetworkTranspor
                 iFadeInCntMax          = FADE_IN_NUM_FRAMES_DBLE_FRAMESIZE / iNetwFrameSizeFact;
                 iAudioFrameSizeSamples = DOUBLE_SYSTEM_FRAME_SIZE_SAMPLES;
             }
-            else
+            else if ( eAudioCompressionType == CT_OPUS64 )
             {
                 iFadeInCntMax          = FADE_IN_NUM_FRAMES / iNetwFrameSizeFact;
                 iAudioFrameSizeSamples = SYSTEM_FRAME_SIZE_SAMPLES;
@@ -538,14 +539,6 @@ EPutDataStat CChannel::PutAudioData ( const CVector<uint8_t>& vecbyData, const i
     {
         MutexSocketBuf.lock();
         {
-            // // DEBUG
-            // static int iLastSize = -1;
-            // if ( iNumBytes != iLastSize )
-            // {
-            //     qDebug() << "RX Paketgröße:" << iNumBytes << "Erwartet:" << ( iNetwFrameSize * iNetwFrameSizeFact )
-            //             << "iNetwFrameSize=" << iNetwFrameSize << "iNetwFrameSizeFact=" << iNetwFrameSizeFact;
-            //     iLastSize = iNumBytes;
-            // }
             // only process audio if packet has correct size
             if ( iNumBytes == ( iNetwFrameSize * iNetwFrameSizeFact ) )
             {

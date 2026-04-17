@@ -23,6 +23,8 @@
 \******************************************************************************/
 
 #include "server.h"
+#include "global.h"
+#include "util.h"
 
 // CServer implementation ******************************************************
 CServer::CServer ( const int          iNewMaxNumChan,
@@ -885,18 +887,23 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
                 pCurCodedData = nullptr;
             }
 
-            // HACK: no decoding, simply copy raw data
-            if ( pCurCodedData != nullptr )
+            // OPUS decode received data stream
+            if ( CurOpusDecoder != nullptr )
             {
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
-                // Wir kopieren die eingegangenen Bytes direkt in den Audio-Buffer
-                memcpy ( &vecvecsData[iChanCnt][iOffset], pCurCodedData, iCeltNumCodedBytes );
+
+                iUnused = opus_custom_decode ( CurOpusDecoder,
+                                               pCurCodedData,
+                                               iCeltNumCodedBytes,
+                                               &vecvecsData[iChanCnt][iOffset],
+                                               iClientFrameSizeSamples );
             }
+            // TODO: this crashes!
             else
             {
-                // Falls Paketverlust: Stille schreiben
+                const int iBlockByteSize = SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt] * sizeof(int16_t);
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
-                memset ( &vecvecsData[iChanCnt][iOffset], 0, iCeltNumCodedBytes );
+                std::memcpy ( &vecvecsData[iChanCnt][iOffset], &pCurCodedData[iB * iBlockByteSize], iBlockByteSize );
             }
         }
 
