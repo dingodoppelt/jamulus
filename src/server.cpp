@@ -885,16 +885,18 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
                 pCurCodedData = nullptr;
             }
 
-            // OPUS decode received data stream
-            if ( CurOpusDecoder != nullptr )
+            // HACK: no decoding, simply copy raw data
+            if ( pCurCodedData != nullptr )
             {
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
-
-                iUnused = opus_custom_decode ( CurOpusDecoder,
-                                               pCurCodedData,
-                                               iCeltNumCodedBytes,
-                                               &vecvecsData[iChanCnt][iOffset],
-                                               iClientFrameSizeSamples );
+                // Wir kopieren die eingegangenen Bytes direkt in den Audio-Buffer
+                memcpy ( &vecvecsData[iChanCnt][iOffset], pCurCodedData, iCeltNumCodedBytes );
+            }
+            else
+            {
+                // Falls Paketverlust: Stille schreiben
+                const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
+                memset ( &vecvecsData[iChanCnt][iOffset], 0, iCeltNumCodedBytes );
             }
         }
 
@@ -1164,17 +1166,15 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                                       OPUS_SET_BITRATE ( CalcBitRateBitsPerSecFromCodedBytes ( iCeltNumCodedBytes, iClientFrameSizeSamples ) ) );
             //### TODO: END ###//
 
+            // HACK: Kein Encoding, Rohdaten direkt in den Netzwerk-Buffer
             for ( int iB = 0; iB < vecNumFrameSizeConvBlocks[iChanCnt]; iB++ )
             {
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
 
-                iUnused = opus_custom_encode ( pCurOpusEncoder,
-                                               &vecsSendData[iOffset],
-                                               iClientFrameSizeSamples,
-                                               &vecvecbyCodedData[iChanCnt][0],
-                                               iCeltNumCodedBytes );
+                // Wir kopieren die gemischten Samples direkt in den Sende-Buffer
+                memcpy ( &vecvecbyCodedData[iChanCnt][0], &vecsSendData[iOffset], iCeltNumCodedBytes );
 
-                // send separate mix to current clients
+                // Und ab ins Netz damit
                 vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
             }
         }

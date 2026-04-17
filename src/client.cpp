@@ -1391,12 +1391,9 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         }
     }
 
-    // Ersetze deine TX-Loop (Zeile 1392-1409):
-
     // HACK: Send raw samples instead of OPUS
     int iRawSampleBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof(int16_t);
 
-    // Nur EINEN Loop-Durchgang - nicht mit iSndCrdFrameSizeFactor!
     memcpy ( &vecCeltData[0], &vecsStereoSndCrd[0], iRawSampleBytes );
     Channel.PrepAndSendPacket ( &Socket, vecCeltData, iRawSampleBytes );
 
@@ -1407,11 +1404,7 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         vecsStereoSndCrdMuteStream = vecsStereoSndCrd;
     }
 
-    // Ersetze deine RX-Loop komplett (Zeile 1418-1445):
-
     // HACK: Receive raw samples instead of OPUS
-
-    // Nur EINEN GetData() Call - nicht in einer Loop mit iSndCrdFrameSizeFactor!
     const bool bReceiveDataOk = ( Channel.GetData ( vecbyNetwData, iRawSampleBytes ) == GS_BUFFER_OK );
 
     if ( bReceiveDataOk )
