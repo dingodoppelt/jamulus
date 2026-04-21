@@ -1,4 +1,8 @@
-### 3.11.0+ <- NOTE: the release version number will be 3.12.0 ###
+### 3.11.1rawaudio ###
+
+- Add uncompressed audio transmission, improves latency by 2ms
+
+### 3.11.0dev <- NOTE: the release version number will be 3.12.0 ###
 
 - Extended SRV record support (#3556).
   (contributed by @softins, @rdica)

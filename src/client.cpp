@@ -137,6 +137,8 @@ CClient::CClient ( const quint16  iPortNumber,
 
     QObject::connect ( &Channel, &CChannel::VersionAndOSReceived, this, &CClient::VersionAndOSReceived );
 
+    QObject::connect ( &Channel, &CChannel::VersionAndOSReceived, this, &CClient::OnVersionAndOSReceived );
+
     QObject::connect ( &Channel, &CChannel::RecorderStateReceived, this, &CClient::RecorderStateReceived );
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLMessReadyForSending, this, &CClient::OnSendCLProtMessage );
@@ -393,6 +395,17 @@ void CClient::OnConClientListMesReceived ( CVector<CChannelInfo> vecChanInfo )
     // pass the received list onwards, now containing client channel IDs
 
     emit ConClientListMesReceived ( vecChanInfo );
+}
+
+void CClient::OnVersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString strVersion )
+{
+#if QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 )
+    if ( QVersionNumber::compare ( QVersionNumber::fromString ( strVersion ), QVersionNumber ( 3, 11, 1 ) ) >= 0 )
+    {
+        bRawAudioIsSupported = true;
+        Init();
+    }
+#endif
 }
 
 void CClient::CreateServerJitterBufferMessage()
@@ -1156,6 +1169,16 @@ void CClient::Init()
             case AQ_HIGH:
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY_DBLE_FRAMESIZE;
                 break;
+            case AQ_RAW:
+                if ( bRawAudioIsSupported )
+                {
+                    iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
+                }
+                else
+                {
+                    iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY_DBLE_FRAMESIZE;
+                }
+                break;
             }
         }
         else
@@ -1174,6 +1197,16 @@ void CClient::Init()
                 break;
             case AQ_HIGH:
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY_DBLE_FRAMESIZE;
+                break;
+            case AQ_RAW:
+                if ( bRawAudioIsSupported )
+                {
+                    iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
+                }
+                else
+                {
+                    iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY_DBLE_FRAMESIZE;
+                }
                 break;
             }
         }
@@ -1199,6 +1232,16 @@ void CClient::Init()
             case AQ_HIGH:
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY;
                 break;
+            case AQ_RAW:
+                if ( bRawAudioIsSupported )
+                {
+                    iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
+                }
+                else
+                {
+                    iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY;
+                }
+                break;
             }
         }
         else
@@ -1217,6 +1260,16 @@ void CClient::Init()
                 break;
             case AQ_HIGH:
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY;
+                break;
+            case AQ_RAW:
+                if ( bRawAudioIsSupported )
+                {
+                    iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
+                }
+                else
+                {
+                    iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY;
+                }
                 break;
             }
         }
@@ -1389,22 +1442,38 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         }
     }
 
-    for ( i = 0, j = 0; i < iSndCrdFrameSizeFactor; i++, j += iNumAudioChannels * iOPUSFrameSizeSamples )
+    if ( eAudioQuality != AQ_RAW || !bRawAudioIsSupported )
     {
-        // OPUS encoding
-        if ( CurOpusEncoder != nullptr )
+        for ( i = 0, j = 0; i < iSndCrdFrameSizeFactor; i++, j += iNumAudioChannels * iOPUSFrameSizeSamples )
         {
-            if ( bMuteOutStream )
+            // OPUS encoding
+            if ( CurOpusEncoder != nullptr )
             {
-                iUnused = opus_custom_encode ( CurOpusEncoder, &vecZeros[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
+                if ( bMuteOutStream )
+                {
+                    iUnused = opus_custom_encode ( CurOpusEncoder, &vecZeros[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
+                }
+                else
+                {
+                    iUnused = opus_custom_encode ( CurOpusEncoder, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
+                }
             }
-            else
-            {
-                iUnused = opus_custom_encode ( CurOpusEncoder, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
-            }
-        }
 
-        // send coded audio through the network
+            // send coded audio through the network
+            Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
+        }
+    }
+    else
+    {
+        if ( !bMuteOutStream )
+        {
+            // Send raw samples instead of OPUS
+            memcpy ( &vecCeltData[0], &vecsStereoSndCrd[0], iCeltNumCodedBytes );
+        }
+        else
+        {
+            memset ( &vecCeltData[0], 0, iCeltNumCodedBytes );
+        }
         Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
     }
 
@@ -1423,24 +1492,41 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
         // get pointer to coded data and manage the flags
         if ( bReceiveDataOk )
         {
-            pCurCodedData = &vecbyNetwData[0];
-
+            if ( eAudioQuality == AQ_RAW && bRawAudioIsSupported )
+            {
+                memcpy ( &vecsStereoSndCrd[0], &vecbyNetwData[0], iCeltNumCodedBytes );
+                pCurCodedData = nullptr;
+            }
+            else
+            {
+                pCurCodedData = &vecbyNetwData[0];
+            }
             // on any valid received packet, we clear the initialization phase flag
             bIsInitializationPhase = false;
         }
         else
         {
-            // for lost packets use null pointer as coded input data
-            pCurCodedData = nullptr;
-
+            if ( eAudioQuality == AQ_RAW && bRawAudioIsSupported )
+            {
+                memset ( &vecsStereoSndCrd[0], 0, iCeltNumCodedBytes );
+                pCurCodedData = nullptr;
+            }
+            else
+            {
+                // for lost packets use null pointer as coded input data
+                pCurCodedData = nullptr;
+            }
             // invalidate the buffer OK status flag
             bJitterBufferOK = false;
         }
 
-        // OPUS decoding
-        if ( CurOpusDecoder != nullptr )
+        if ( eAudioQuality != AQ_RAW || !bRawAudioIsSupported )
         {
-            iUnused = opus_custom_decode ( CurOpusDecoder, pCurCodedData, iCeltNumCodedBytes, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples );
+            // OPUS decoding
+            if ( CurOpusDecoder != nullptr )
+            {
+                iUnused = opus_custom_decode ( CurOpusDecoder, pCurCodedData, iCeltNumCodedBytes, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples );
+            }
         }
     }
 
