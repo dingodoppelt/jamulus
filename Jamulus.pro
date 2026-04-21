@@ -15,7 +15,7 @@ contains(CONFIG, "noupcasename") {
 # allow detailed version info for intermediate builds (#475)
 contains(VERSION, .*dev.*) {
     exists(".git/config") {
-        GIT_DESCRIPTION=$$system(git describe --match=xxxxxxxxxxxxxxxxxxxx --always --abbrev --dirty) # the match should never match
+        GIT_DESCRIPTION=$$system(git describe --match=xxxxxxxxxxxxxxxxxxxx --always --abbrev --dirty):$$system(git show -s "--pretty=format:%ct") # commit_id(-dirty):seconds_since_epoch
         VERSION = "$$VERSION"-$$GIT_DESCRIPTION
         message("building version \"$$VERSION\" (intermediate in git repository)")
     } else {
@@ -52,7 +52,8 @@ contains(CONFIG, "headless") {
 
 # Do not set LRELEASE_DIR explicitly when using embed_translations.
 # It doesn't work with multiple targets or architectures.
-TRANSLATIONS = src/translation/translation_de_DE.ts \
+TRANSLATIONS = src/translation/translation_ja_JP.ts \
+    src/translation/translation_de_DE.ts \
     src/translation/translation_fr_FR.ts \
     src/translation/translation_ko_KR.ts \
     src/translation/translation_pt_PT.ts \
@@ -61,6 +62,7 @@ TRANSLATIONS = src/translation/translation_de_DE.ts \
     src/translation/translation_nb_NO.ts \
     src/translation/translation_nl_NL.ts \
     src/translation/translation_pl_PL.ts \
+    src/translation/translation_ru_RU.ts \
     src/translation/translation_sk_SK.ts \
     src/translation/translation_it_IT.ts \
     src/translation/translation_sv_SE.ts \
@@ -147,6 +149,11 @@ win32 {
             INCLUDEPATH += "$${programfilesdir}/JACK2/include"
             LIBS += "$${programfilesdir}/JACK2/lib/$${libjackname}"
         } else {
+            message(Using native Windows MIDI.)
+
+            HEADERS += src/sound/midi-win/midi.h
+            SOURCES += src/sound/midi-win/midi.cpp
+
             message(Using ASIO.)
             message(Please review the ASIO SDK licence.)
 
@@ -229,6 +236,8 @@ win32 {
     }
 
 } else:ios {
+    CONFIG+=add_ios_ffmpeg_libraries # QTBUG-129651
+    QMAKE_ASSET_CATALOGS += src/res/iOSIcons.xcassets
     QMAKE_INFO_PLIST = ios/Info.plist
     OBJECTIVE_SOURCES += src/ios/ios_app_delegate.mm
     HEADERS += src/ios/ios_app_delegate.h
@@ -378,7 +387,8 @@ FORMS_GUI = src/aboutdlgbase.ui \
         src/connectdlgbase.ui
 }
 
-HEADERS += src/buffer.h \
+HEADERS += src/plugins/audioreverb.h \
+    src/buffer.h \
     src/channel.h \
     src/global.h \
     src/protocol.h \
@@ -469,8 +479,7 @@ HEADERS_OPUS = libs/opus/celt/arch.h \
     libs/opus/silk/typedef.h \
     libs/opus/src/analysis.h \
     libs/opus/src/mlp.h \
-    libs/opus/src/opus_private.h \
-    libs/opus/src/tansig_table.h
+    libs/opus/src/opus_private.h
 
 HEADERS_OPUS_ARM = libs/opus/celt/arm/armcpu.h \
     libs/opus/silk/arm/biquad_alt_arm.h \
@@ -486,7 +495,8 @@ HEADERS_OPUS_X86 = libs/opus/celt/x86/celt_lpc_sse.h \
     libs/opus/celt/x86/x86cpu.h \
     $$files(libs/opus/silk/x86/*.h)
 
-SOURCES += src/buffer.cpp \
+SOURCES += src/plugins/audioreverb.cpp \
+    src/buffer.cpp \
     src/channel.cpp \
     src/main.cpp \
     src/protocol.cpp \
@@ -642,6 +652,7 @@ SOURCES_OPUS = libs/opus/celt/bands.c \
     libs/opus/silk/VAD.c \
     libs/opus/silk/VQ_WMat_EC.c \
     libs/opus/src/analysis.c \
+    libs/opus/src/extensions.c \
     libs/opus/src/mlp.c \
     libs/opus/src/mlp_data.c \
     libs/opus/src/opus.c \
@@ -1169,6 +1180,12 @@ contains(CONFIG, "opus_shared_lib") {
 contains(CONFIG, "disable_version_check") {
     message(The version check is disabled.)
     DEFINES += DISABLE_VERSION_CHECK
+}
+
+# disable SRV resolution in DNS if requested (#3556)
+contains(CONFIG, "disable_srv_dns") {
+    message(The use of SRV records in DNS is disabled.)
+    DEFINES += DISABLE_SRV_DNS
 }
 
 # Enable formatting all code via `make clang_format`.

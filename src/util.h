@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -53,7 +53,7 @@
 #include <QElapsedTimer>
 #include <QTextBoundaryFinder>
 #include <QTimer>
-#ifndef CLIENT_NO_SRV_CONNECT
+#ifndef DISABLE_SRV_DNS
 #    include <QDnsLookup>
 #endif
 #ifndef _WIN32
@@ -431,6 +431,7 @@ protected:
 
 public slots:
     void OnHelpWhatsThis() { QWhatsThis::enterWhatsThisMode(); }
+    void OnHelpPrivacyPolicy() { QDesktopServices::openUrl ( QUrl ( PRIVACY_POLICY_URL ) ); }
     void OnHelpAbout() { AboutDlg.exec(); }
     void OnHelpAboutQt() { QMessageBox::aboutQt ( nullptr, QString ( tr ( "About Qt" ) ) ); }
     void OnHelpClientGetStarted() { QDesktopServices::openUrl ( QUrl ( CLIENT_GETTING_STARTED_URL ) ); }
@@ -525,6 +526,14 @@ enum EGUIDesign
     GD_SLIMFADER = 2
 };
 
+// Default, fallback skin if no skin was selected
+#if defined( Q_OS_IOS ) || defined( ANDROID ) || defined( Q_OS_ANDROID )
+// on mobile, slim UI is preferred for space reasons
+#    define GD_DEFAULT GD_SLIMFADER
+#else
+#    define GD_DEFAULT GD_ORIGINAL
+#endif
+
 // MeterStyle enum -------------------------------------------------------------
 enum EMeterStyle
 {
@@ -558,11 +567,12 @@ enum ERecorderState
 enum EChSortType
 {
     // used for settings -> enum values should be fixed
-    ST_NO_SORT       = 0,
-    ST_BY_NAME       = 1,
-    ST_BY_INSTRUMENT = 2,
-    ST_BY_GROUPID    = 3,
-    ST_BY_CITY       = 4
+    ST_NO_SORT           = 0,
+    ST_BY_NAME           = 1,
+    ST_BY_INSTRUMENT     = 2,
+    ST_BY_GROUPID        = 3,
+    ST_BY_CITY           = 4,
+    ST_BY_SERVER_CHANNEL = 5
 };
 
 // Directory type --------------------------------------------------------------
@@ -1045,11 +1055,11 @@ class NetworkUtil
 public:
     static bool ParseNetworkAddressString ( QString strAddress, QHostAddress& InetAddr, bool bEnableIPv6 );
 
-#ifndef CLIENT_NO_SRV_CONNECT
+#ifndef DISABLE_SRV_DNS
     static bool ParseNetworkAddressSrv ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 );
-    static bool ParseNetworkAddressWithSrvDiscovery ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 );
 #endif
     static bool ParseNetworkAddress ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 );
+    static bool ParseNetworkAddressBare ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 );
 
     static QString      FixAddress ( const QString& strAddress );
     static CHostAddress GetLocalAddress();
@@ -1098,54 +1108,16 @@ public:
     {
 #ifdef _WIN32
         return OT_WINDOWS;
-#elif defined( __APPLE__ ) || defined( __MACOSX )
+#elif defined( Q_OS_MACOS )
         return OT_MAC_OS;
-#elif defined( ANDROID )
+#elif defined( Q_OS_IOS )
+        return OT_I_OS;
+#elif defined( Q_OS_ANDROID ) || defined( ANDROID )
         return OT_ANDROID;
 #else
         return OT_LINUX;
 #endif
     }
-};
-
-// Audio reverbration ----------------------------------------------------------
-class CAudioReverb
-{
-public:
-    CAudioReverb() {}
-
-    void Init ( const EAudChanConf eNAudioChannelConf, const int iNStereoBlockSizeSam, const int iSampleRate, const float fT60 = 1.1f );
-
-    void Clear();
-    void Process ( CVector<int16_t>& vecsStereoInOut, const bool bReverbOnLeftChan, const float fAttenuation );
-
-protected:
-    void setT60 ( const float fT60, const int iSampleRate );
-    bool isPrime ( const int number );
-
-    class COnePole
-    {
-    public:
-        COnePole() : fA ( 0 ), fB ( 0 ) { Reset(); }
-        void  setPole ( const float fPole );
-        float Calc ( const float fIn );
-        void  Reset() { fLastSample = 0; }
-
-    protected:
-        float fA;
-        float fB;
-        float fLastSample;
-    };
-
-    EAudChanConf eAudioChannelConf;
-    int          iStereoBlockSizeSam;
-    CFIFO<float> allpassDelays[3];
-    CFIFO<float> combDelays[4];
-    COnePole     combFilters[4];
-    CFIFO<float> outLeftDelay;
-    CFIFO<float> outRightDelay;
-    float        allpassCoefficient;
-    float        combCoefficient[4];
 };
 
 // CRC -------------------------------------------------------------------------
@@ -1397,3 +1369,16 @@ protected:
     bool            bBlockOnDoubleErrors;
     bool            bPreviousState;
 };
+
+// Generic hash functor for enum classes
+// Can be removed once macOS Legacy uses C++11 or newer
+#if defined( Q_OS_MACOS ) && QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
+template<typename T>
+struct EnumClassHash
+{
+    std::size_t operator() ( T t ) const
+    {
+        return std::hash<typename std::underlying_type<T>::type>() ( static_cast<typename std::underlying_type<T>::type> ( t ) );
+    }
+};
+#endif

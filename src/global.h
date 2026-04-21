@@ -1,5 +1,5 @@
 /******************************************************************************\
- * \Copyright (c) 2004-2024
+ * \Copyright (c) 2004-2026
  * \author    Volker Fischer
  *
 
@@ -73,7 +73,7 @@ LED bar:      lbr
 
 // version and application name (use version from qt prject file)
 #undef VERSION
-#define VERSION  APP_VERSION
+#define VERSION  GetDisplayVersion ( APP_VERSION )
 #define APP_NAME "Jamulus"
 
 // Windows registry key name of auto run entry for the server
@@ -96,8 +96,8 @@ LED bar:      lbr
 #define MAX_DELAY_PANNING_SAMPLES 64
 
 // default server address and port numbers
-#define DEFAULT_QOS_NUMBER            128 // CS4 (Quality of Service)
-#define DEFAULT_SERVER_ADDRESS        "anygenre1.jamulus.io"
+#define DEFAULT_QOS_NUMBER            128                          // CS4 (Quality of Service)
+#define DEFAULT_SERVER_ADDRESS        "anygenre1.jamulus.io:22124" // default port explicit to avoid unneeded SRV lookup
 #define DEFAULT_PORT_NUMBER           22124
 #define CENTSERV_ANY_GENRE2           "anygenre2.jamulus.io:22224"
 #define CENTSERV_ANY_GENRE3           "anygenre3.jamulus.io:22624"
@@ -117,6 +117,7 @@ LED bar:      lbr
 #define CLIENT_GETTING_STARTED_URL "https://jamulus.io/wiki/Getting-Started"
 #define SERVER_GETTING_STARTED_URL "https://jamulus.io/wiki/Running-a-Server"
 #define SOFTWARE_MANUAL_URL        "https://jamulus.io/wiki/Software-Manual"
+#define PRIVACY_POLICY_URL         "https://jamulus.io/wiki/Privacy-Statement"
 
 // app update message
 #define APP_UPGRADE_AVAILABLE_MSG_TEXT \
@@ -164,6 +165,15 @@ LED bar:      lbr
 // audio mixer fader and panning maximum value
 #define AUD_MIX_FADER_MAX 100
 #define AUD_MIX_PAN_MAX   100
+
+// MIDI pickup mode tolerance (in fader/pan units, 0-100)
+#define MIDI_PICKUP_TOLERANCE 2
+
+// Number of recent MIDI values to track for pickup logic
+#define MIDI_PICKUP_HISTORY 2
+
+// Time of inactivity before pickup mode resets (ms)
+#define MIDI_PICKUP_INACTIVITY_TIMEOUT_MS 1000
 
 // range of audio mixer fader
 #define AUD_MIX_FADER_RANGE_DB 35.0f
@@ -266,6 +276,7 @@ LED bar:      lbr
 #define SETTING_TAB_USER     0
 #define SETTING_TAB_AUDIONET 1
 #define SETTING_TAB_ADVANCED 2
+#define SETTING_TAB_MIDI     3
 
 // common tool tip bottom line text
 #define TOOLTIP_COM_END_TEXT \
@@ -374,3 +385,5 @@ bool GetNumericArgument ( int     argc,
                           double  rRangeStart,
                           double  rRangeStop,
                           double& rValue );
+
+inline QString GetDisplayVersion ( QString str ) { return str.contains ( ':' ) ? str.mid ( 0, str.lastIndexOf ( ':' ) ) : str; }

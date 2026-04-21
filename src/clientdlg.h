@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -42,6 +42,9 @@
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 )
 #    include <QVersionNumber>
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 5, 0 )
+#    include <QStyleHints>
+#endif
 #include "global.h"
 #include "util.h"
 #include "client.h"
@@ -77,7 +80,6 @@ public:
     CClientDlg ( CClient*         pNCliP,
                  CClientSettings* pNSetP,
                  const QString&   strConnOnStartupAddress,
-                 const QString&   strMIDISetup,
                  const bool       bNewShowComplRegConnList,
                  const bool       bShowAnalyzerConsole,
                  const bool       bMuteStream,
@@ -171,6 +173,7 @@ public slots:
     void OnSortChannelsByInstrument() { MainMixerBoard->SetFaderSorting ( ST_BY_INSTRUMENT ); }
     void OnSortChannelsByGroupID() { MainMixerBoard->SetFaderSorting ( ST_BY_GROUPID ); }
     void OnSortChannelsByCity() { MainMixerBoard->SetFaderSorting ( ST_BY_CITY ); }
+    void OnSortChannelsByChannel() { MainMixerBoard->SetFaderSorting ( ST_BY_SERVER_CHANNEL ); }
     void OnClearAllStoredSoloMuteSettings();
     void OnSetAllFadersToNewClientLevel() { MainMixerBoard->SetAllFaderLevelsToNewClientLevel(); }
     void OnAutoAdjustAllFaderLevels() { MainMixerBoard->AutoAdjustAllFaderLevels(); }
@@ -241,6 +244,8 @@ public slots:
     void OnNumClientsChanged ( int iNewNumClients );
 
     void accept() { close(); } // introduced by pljones
+
+    void OnMIDIControllerUsageChanged ( bool bEnabled );
 
 signals:
     void SendTabChange ( int iTabIdx );
