@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -49,6 +49,7 @@ enum EMidiCtlType
     Solo,
     Mute,
     MuteMyself,
+    Device,
     None
 };
 
@@ -64,12 +65,10 @@ public:
 class CSoundBase : public QThread
 {
     Q_OBJECT
-
 public:
     CSoundBase ( const QString& strNewSystemDriverTechniqueName,
                  void ( *fpNewProcessCallback ) ( CVector<int16_t>& psData, void* pParg ),
-                 void*          pParg,
-                 const QString& strMIDISetup );
+                 void* pParg );
 
     virtual int  Init ( const int iNewPrefMonoBufferSize ) { return iNewPrefMonoBufferSize; }
     virtual void Start()
@@ -106,12 +105,33 @@ public:
 
     virtual void OpenDriverSetup() {}
 
+    virtual const QString& GetMIDIDevice() { return strMIDIDevice; }
+    virtual void           SetMIDIDevice ( const QString& strDevice ) { strMIDIDevice = strDevice; }
+    virtual QStringList    GetMIDIDevNames() { return QStringList(); } // Base class default (overridden by platform implementations)
+
     bool IsRunning() const { return bRun; }
     bool IsCallbackEntered() const { return bCallbackEntered; }
 
     // TODO this should be protected but since it is used
     // in a callback function it has to be public -> better solution
     void EmitReinitRequestSignal ( const ESndCrdResetType eSndCrdResetType ) { emit ReinitRequest ( eSndCrdResetType ); }
+
+    // this needs to be public so that it can be called from CMidi
+    void         ParseMIDIMessage ( const CVector<uint8_t>& vMIDIPaketBytes );
+    virtual void EnableMIDI ( bool /* bEnable */ ) {}    // Default empty implementation
+    virtual bool IsMIDIEnabled() const { return false; } // Default false
+
+    void SetCtrlMIDIChannel ( int iCh ) { iCtrlMIDIChannel = iCh; }
+
+    void SetMIDIControllerMapping ( int iFaderOffset,
+                                    int iFaderCount,
+                                    int iPanOffset,
+                                    int iPanCount,
+                                    int iSoloOffset,
+                                    int iSoloCount,
+                                    int iMuteOffset,
+                                    int iMuteCount,
+                                    int iMuteMyselfCC );
 
 protected:
     virtual QString  LoadAndInitializeDriver ( QString, bool ) { return ""; }
@@ -151,8 +171,6 @@ protected:
         ( *fpProcessCallback ) ( psData, pProcessCallbackArg );
     }
 
-    void ParseMIDIMessage ( const CVector<uint8_t>& vMIDIPaketBytes );
-
     bool   bRun;
     bool   bCallbackEntered;
     QMutex MutexAudioProcessCallback;
@@ -166,6 +184,8 @@ protected:
     QString strCurDevName;
     QString strDriverNames[MAX_NUMBER_SOUND_CARDS];
 
+    QString strMIDIDevice;
+
 signals:
     void ReinitRequest ( int iSndCrdResetType );
     void ControllerInFaderLevel ( int iChannelIdx, int iValue );
@@ -173,4 +193,5 @@ signals:
     void ControllerInFaderIsSolo ( int iChannelIdx, bool bIsSolo );
     void ControllerInFaderIsMute ( int iChannelIdx, bool bIsMute );
     void ControllerInMuteMyself ( bool bMute );
+    void MidiCCReceived ( int ccNumber );
 };

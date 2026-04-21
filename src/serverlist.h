@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -181,7 +181,7 @@ protected:
     void Register();
     void SetRegistered ( bool bIsRegister );
 
-    int  IndexOf ( CHostAddress haSearchTerm );
+    int  IndexOf ( const CHostAddress& haSearchTerm );
     bool Load();
     void Save();
     void SetSvrRegStatus ( ESvrRegStatus eNSvrRegStatus );

@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -24,7 +24,82 @@
 
 #include "connectdlg.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 8, 0 )
+#    include <QAccessible>
+#    include <QAccessibleAnnouncementEvent>
+#endif
+
 /* Implementation *************************************************************/
+
+// mapVersionStr - converts a version number to a sortable string
+static QString mapVersionStr ( const QString& versionStr )
+{
+    QString key;
+    QString x = ">"; // default suffix is later (git, dev, nightly, etc)
+
+    // Regex for SemVer: major.minor.patch-suffix
+    QRegularExpression      semVerRegex ( R"(^(\d+)\.(\d+)\.(\d+)-?(.*):?(.*)$)" );
+    QRegularExpressionMatch match = semVerRegex.match ( versionStr );
+
+    if ( !match.hasMatch() )
+    {
+        return versionStr; // fallback: plain text
+    }
+
+    int     major  = match.captured ( 1 ).toInt();
+    int     minor  = match.captured ( 2 ).toInt();
+    int     patch  = match.captured ( 3 ).toInt();
+    QString suffix = match.captured ( 4 ); // may be empty
+    QString tstamp = match.captured ( 5 ); // may be empty
+
+    if ( suffix.isEmpty() )
+    {
+        x = "="; // bare version number
+    }
+    else if ( suffix.startsWith ( "rc" ) || suffix.startsWith ( "beta" ) || suffix.startsWith ( "alpha" ) )
+    {
+        x = "<"; // pre-release version
+    }
+
+    // construct a sortable key mmmnnnpppksuffix, where:
+    //    mmm = major
+    //    nnn = minor
+    //    ppp = patch
+    //    k = sort key to sort alpha, beta, rc before bare version number, and other suffixes after (<, =, >)
+    //    suffix = supplied suffix
+    key = QString ( "%1%2%3%4%5" )
+              .arg ( major, 3, 10, QLatin1Char ( '0' ) )
+              .arg ( minor, 3, 10, QLatin1Char ( '0' ) )
+              .arg ( patch, 3, 10, QLatin1Char ( '0' ) )
+              .arg ( x )
+              .arg ( tstamp.isEmpty() ? suffix : tstamp );
+
+    return key;
+}
+
+// Subclass of QTreeWidgetItem that allows LVC_VERSION to sort by the UserRole data value
+CMappedTreeWidgetItem::CMappedTreeWidgetItem ( QTreeWidget* owner ) : QTreeWidgetItem ( owner ), owner ( owner ) {}
+
+bool CMappedTreeWidgetItem::operator<( const QTreeWidgetItem& other ) const
+{
+    if ( !owner )
+        return QTreeWidgetItem::operator<( other );
+
+    int column = owner->sortColumn();
+
+    // we only need this override for comparing server versions
+    if ( column != CConnectDlg::LVC_VERSION )
+        return QTreeWidgetItem::operator<( other );
+
+    QVariant lhs = data ( column, Qt::UserRole );
+    QVariant rhs = other.data ( column, Qt::UserRole );
+
+    if ( !lhs.isValid() || !rhs.isValid() )
+        return QTreeWidgetItem::operator<( other );
+
+    return lhs.toString() < rhs.toString();
+}
+
 CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteRegList, const bool bNEnableIPv6, QWidget* parent ) :
     CBaseDlg ( parent, Qt::Dialog ),
     pSettings ( pNSetP ),
@@ -96,10 +171,11 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     cbxServerAddr->setAccessibleName ( tr ( "Server address edit box" ) );
     cbxServerAddr->setAccessibleDescription ( tr ( "Holds the current server address. It also stores old addresses in the combo box list." ) );
 
-    butDeleteServerAddr->setAccessibleName ( tr ( "Delete server address button" ) );
-    butDeleteServerAddr->setWhatsThis ( "<b>" + tr ( "Delete Server Address" ) + ":</b> " +
+    tbtDeleteServerAddr->setAccessibleName ( tr ( "Delete server address button" ) );
+    tbtDeleteServerAddr->setWhatsThis ( "<b>" + tr ( "Delete Server Address" ) + ":</b> " +
                                         tr ( "Click the button to clear the currently selected server address "
                                              "and delete it from the list of stored servers." ) );
+    tbtDeleteServerAddr->setText ( u8"\u232B" );
 
     UpdateDirectoryComboBox();
 
@@ -111,14 +187,16 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     // must not be specified since this column takes all the remaining space)
 #ifdef ANDROID
     // for Android we need larger numbers because of the default font size
-    lvwServers->setColumnWidth ( 0, 200 );
-    lvwServers->setColumnWidth ( 1, 130 );
-    lvwServers->setColumnWidth ( 2, 100 );
+    lvwServers->setColumnWidth ( LVC_NAME, 200 );
+    lvwServers->setColumnWidth ( LVC_PING, 130 );
+    lvwServers->setColumnWidth ( LVC_CLIENTS, 100 );
+    lvwServers->setColumnWidth ( LVC_VERSION, 150 );
 #else
-    lvwServers->setColumnWidth ( 0, 180 );
-    lvwServers->setColumnWidth ( 1, 75 );
-    lvwServers->setColumnWidth ( 2, 70 );
-    lvwServers->setColumnWidth ( 3, 220 );
+    lvwServers->setColumnWidth ( LVC_NAME, 180 );
+    lvwServers->setColumnWidth ( LVC_PING, 75 );
+    lvwServers->setColumnWidth ( LVC_CLIENTS, 70 );
+    lvwServers->setColumnWidth ( LVC_LOCATION, 220 );
+    lvwServers->setColumnWidth ( LVC_VERSION, 135 );
 #endif
     lvwServers->clear();
 
@@ -131,11 +209,14 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     // 1: ping time
     // 2: number of musicians (including additional strings like " (full)")
     // 3: location
-    // 4: minimum ping time (invisible)
-    // 5: maximum number of clients (invisible)
-    lvwServers->setColumnCount ( 6 );
-    lvwServers->hideColumn ( 4 );
-    lvwServers->hideColumn ( 5 );
+    // 4: server version
+    // 5: minimum ping time (invisible)
+    // 6: maximum number of clients (invisible)
+    // (see EConnectListViewColumns in connectdlg.h, which must match the above)
+
+    lvwServers->setColumnCount ( LVC_COLUMNS );
+    lvwServers->hideColumn ( LVC_PING_MIN_HIDDEN );
+    lvwServers->hideColumn ( LVC_CLIENTS_MAX_HIDDEN );
 
     // per default the root shall not be decorated (to save space)
     lvwServers->setRootIsDecorated ( false );
@@ -152,8 +233,8 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     // setup timers
     TimerInitialSort.setSingleShot ( true ); // only once after list request
 
-#ifdef ANDROID
-    // for the android version maximize the window
+#if defined( ANDROID ) || defined( Q_OS_IOS )
+    // for the Android and iOS version maximize the window
     setWindowState ( Qt::WindowMaximized );
 #endif
 
@@ -163,6 +244,7 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
 
     // to get default return key behaviour working
     QObject::connect ( lvwServers, &QTreeWidget::activated, this, &CConnectDlg::OnConnectClicked );
+    QObject::connect ( lvwServers, &QTreeWidget::currentItemChanged, this, &CConnectDlg::OnCurrentServerItemChanged );
 
     // line edit
     QObject::connect ( edtFilter, &QLineEdit::textEdited, this, &CConnectDlg::OnFilterTextEdited );
@@ -181,7 +263,7 @@ CConnectDlg::CConnectDlg ( CClientSettings* pNSetP, const bool bNewShowCompleteR
     QObject::connect ( butConnect, &QPushButton::clicked, this, &CConnectDlg::OnConnectClicked );
 
     // tool buttons
-    QObject::connect ( butDeleteServerAddr, &QPushButton::clicked, this, &CConnectDlg::OnDeleteServerAddrClicked );
+    QObject::connect ( tbtDeleteServerAddr, &QToolButton::clicked, this, &CConnectDlg::OnDeleteServerAddrClicked );
 
     // timers
     QObject::connect ( &TimerPing, &QTimer::timeout, this, &CConnectDlg::OnTimerPing );
@@ -238,13 +320,13 @@ void CConnectDlg::RequestServerList()
     }
     cbxDirectory->blockSignals ( false );
 
-    // Get the IP address of the directory server (using the ParseNetworAddress
+    // Get the IP address of the directory server (using the ParseNetworkAddress
     // function) when the connect dialog is opened, this seems to be the correct
     // time to do it. Note that in case of custom directories we
     // use iCustomDirectoryIndex as an index into the vector.
 
     // Allow IPv4 only for communicating with Directories
-    if ( NetworkUtil().ParseNetworkAddress (
+    if ( NetworkUtil::ParseNetworkAddress (
              NetworkUtil::GetDirectoryAddress ( pSettings->eDirectoryType, pSettings->vstrDirectoryAddress[pSettings->iCustomDirectoryIndex] ),
              haDirectoryAddress,
              false ) )
@@ -355,7 +437,7 @@ void CConnectDlg::SetServerList ( const CHostAddress& InetAddr, const CVector<CS
         }
 
         // create new list view item
-        QTreeWidgetItem* pNewListViewItem = new QTreeWidgetItem ( lvwServers );
+        CMappedTreeWidgetItem* pNewListViewItem = new CMappedTreeWidgetItem ( lvwServers );
 
         // make the entry invisible (will be set to visible on successful ping
         // result) if the complete list of registered servers shall not be shown
@@ -367,7 +449,7 @@ void CConnectDlg::SetServerList ( const CHostAddress& InetAddr, const CVector<CS
         // server name (if empty, show host address instead)
         if ( !vecServerInfo[iIdx].strName.isEmpty() )
         {
-            pNewListViewItem->setText ( 0, vecServerInfo[iIdx].strName );
+            pNewListViewItem->setText ( LVC_NAME, vecServerInfo[iIdx].strName );
         }
         else
         {
@@ -377,30 +459,30 @@ void CConnectDlg::SetServerList ( const CHostAddress& InetAddr, const CVector<CS
             if ( vecServerInfo[iIdx].HostAddr.iPort == DEFAULT_PORT_NUMBER )
             {
                 // only show IP number, no port number
-                pNewListViewItem->setText ( 0, CurHostAddress.toString ( CHostAddress::SM_IP_NO_LAST_BYTE ) );
+                pNewListViewItem->setText ( LVC_NAME, CurHostAddress.toString ( CHostAddress::SM_IP_NO_LAST_BYTE ) );
             }
             else
             {
                 // show IP number and port
-                pNewListViewItem->setText ( 0, CurHostAddress.toString ( CHostAddress::SM_IP_NO_LAST_BYTE_PORT ) );
+                pNewListViewItem->setText ( LVC_NAME, CurHostAddress.toString ( CHostAddress::SM_IP_NO_LAST_BYTE_PORT ) );
             }
         }
 
         // in case of all servers shown, add the registration number at the beginning
         if ( bShowCompleteRegList )
         {
-            pNewListViewItem->setText ( 0, QString ( "%1: " ).arg ( 1 + iIdx, 3 ) + pNewListViewItem->text ( 0 ) );
+            pNewListViewItem->setText ( LVC_NAME, QString ( "%1: " ).arg ( 1 + iIdx, 3 ) + pNewListViewItem->text ( LVC_NAME ) );
         }
 
         // show server name in bold font if it is a permanent server
-        QFont CurServerNameFont = pNewListViewItem->font ( 0 );
+        QFont CurServerNameFont = pNewListViewItem->font ( LVC_NAME );
         CurServerNameFont.setBold ( vecServerInfo[iIdx].bPermanentOnline );
-        pNewListViewItem->setFont ( 0, CurServerNameFont );
+        pNewListViewItem->setFont ( LVC_NAME, CurServerNameFont );
 
         // the ping time shall be shown in bold font
-        QFont CurPingTimeFont = pNewListViewItem->font ( 1 );
+        QFont CurPingTimeFont = pNewListViewItem->font ( LVC_PING );
         CurPingTimeFont.setBold ( true );
-        pNewListViewItem->setFont ( 1, CurPingTimeFont );
+        pNewListViewItem->setFont ( LVC_PING, CurPingTimeFont );
 
         // server location (city and country)
         QString strLocation = vecServerInfo[iIdx].strCity;
@@ -433,17 +515,17 @@ void CConnectDlg::SetServerList ( const CHostAddress& InetAddr, const CVector<CS
             strLocation += strCountryToString;
         }
 
-        pNewListViewItem->setText ( 3, strLocation );
+        pNewListViewItem->setText ( LVC_LOCATION, strLocation );
 
         // init the minimum ping time with a large number (note that this number
         // must fit in an integer type)
-        pNewListViewItem->setText ( 4, "99999999" );
+        pNewListViewItem->setText ( LVC_PING_MIN_HIDDEN, "99999999" );
 
         // store the maximum number of clients
-        pNewListViewItem->setText ( 5, QString().setNum ( vecServerInfo[iIdx].iMaxNumClients ) );
+        pNewListViewItem->setText ( LVC_CLIENTS_MAX_HIDDEN, QString().setNum ( vecServerInfo[iIdx].iMaxNumClients ) );
 
         // store host address
-        pNewListViewItem->setData ( 0, Qt::UserRole, CurHostAddress.toString() );
+        pNewListViewItem->setData ( LVC_NAME, Qt::UserRole, CurHostAddress.toString() );
 
         // per default expand the list item (if not "show all servers")
         if ( bShowAllMusicians )
@@ -461,7 +543,7 @@ void CConnectDlg::SetServerList ( const CHostAddress& InetAddr, const CVector<CS
 void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVector<CChannelInfo>& vecChanInfo )
 {
     // find the server with the correct address
-    QTreeWidgetItem* pCurListViewItem = FindListViewItem ( InetAddr );
+    CMappedTreeWidgetItem* pCurListViewItem = FindListViewItem ( InetAddr );
 
     if ( pCurListViewItem )
     {
@@ -474,7 +556,7 @@ void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVect
         for ( int i = 0; i < iNumConnectedClients; i++ )
         {
             // create new list view item
-            QTreeWidgetItem* pNewChildListViewItem = new QTreeWidgetItem ( pCurListViewItem );
+            QTreeWidgetItem* pNewChildListViewItem = new QTreeWidgetItem ( static_cast<QTreeWidgetItem*> ( pCurListViewItem ) );
 
             // child items shall use only one column
             pNewChildListViewItem->setFirstColumnSpanned ( true );
@@ -487,6 +569,7 @@ void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVect
 
             if ( vecChanInfo[i].eCountry != QLocale::AnyCountry )
             {
+                pNewChildListViewItem->setData ( LVC_NAME, Qt::UserRole, QLocale::countryToString ( vecChanInfo[i].eCountry ) );
                 // try to load the country flag icon
                 QPixmap CountryFlagPixmap ( CLocale::GetCountryFlagIconsResourceReference ( vecChanInfo[i].eCountry ) );
 
@@ -494,7 +577,7 @@ void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVect
                 if ( !CountryFlagPixmap.isNull() )
                 {
                     // set correct picture
-                    pNewChildListViewItem->setIcon ( 0, QIcon ( CountryFlagPixmap ) );
+                    pNewChildListViewItem->setIcon ( LVC_NAME, QIcon ( CountryFlagPixmap ) );
 
                     bCountryFlagIsUsed = true;
                 }
@@ -509,7 +592,7 @@ void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVect
                 if ( !( CInstPictures::IsNotUsedInstrument ( vecChanInfo[i].iInstrument ) || strCurResourceRef.isEmpty() ) )
                 {
                     // set correct picture
-                    pNewChildListViewItem->setIcon ( 0, QIcon ( QPixmap ( strCurResourceRef ) ) );
+                    pNewChildListViewItem->setIcon ( LVC_NAME, QIcon ( QPixmap ( strCurResourceRef ) ) );
                 }
             }
 
@@ -520,7 +603,7 @@ void CConnectDlg::SetConnClientsList ( const CHostAddress& InetAddr, const CVect
             }
 
             // apply the client text to the list view item
-            pNewChildListViewItem->setText ( 0, sClientText );
+            pNewChildListViewItem->setText ( LVC_NAME, sClientText );
 
             // add the new child to the corresponding server item
             pCurListViewItem->addChild ( pNewChildListViewItem );
@@ -622,8 +705,8 @@ void CConnectDlg::UpdateListFilter()
 
         for ( int iIdx = 0; iIdx < iServerListLen; iIdx++ )
         {
-            QTreeWidgetItem* pCurListViewItem = lvwServers->topLevelItem ( iIdx );
-            bool             bFilterFound     = false;
+            CMappedTreeWidgetItem* pCurListViewItem = static_cast<CMappedTreeWidgetItem*> ( lvwServers->topLevelItem ( iIdx ) );
+            bool                   bFilterFound     = false;
 
             // DEFINITION: if "#" is set at the beginning of the filter text, we show
             //             occupied servers (#397)
@@ -638,13 +721,13 @@ void CConnectDlg::UpdateListFilter()
             else
             {
                 // search server name
-                if ( pCurListViewItem->text ( 0 ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
+                if ( pCurListViewItem->text ( LVC_NAME ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
                 {
                     bFilterFound = true;
                 }
 
                 // search location
-                if ( pCurListViewItem->text ( 3 ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
+                if ( pCurListViewItem->text ( LVC_LOCATION ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
                 {
                     bFilterFound = true;
                 }
@@ -652,7 +735,7 @@ void CConnectDlg::UpdateListFilter()
                 // search children
                 for ( int iCCnt = 0; iCCnt < pCurListViewItem->childCount(); iCCnt++ )
                 {
-                    if ( pCurListViewItem->child ( iCCnt )->text ( 0 ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
+                    if ( pCurListViewItem->child ( iCCnt )->text ( LVC_NAME ).indexOf ( sFilterText, 0, Qt::CaseInsensitive ) >= 0 )
                     {
                         bFilterFound = true;
                     }
@@ -660,7 +743,7 @@ void CConnectDlg::UpdateListFilter()
             }
 
             // only update Hide state if ping time was received
-            if ( !pCurListViewItem->text ( 1 ).isEmpty() || bShowCompleteRegList )
+            if ( !pCurListViewItem->text ( LVC_PING ).isEmpty() || bShowCompleteRegList )
             {
                 // only update hide and expand status if the hide state has to be changed to
                 // preserve if user clicked on expand icon manually
@@ -682,10 +765,10 @@ void CConnectDlg::UpdateListFilter()
 
             for ( int iIdx = 0; iIdx < iServerListLen; iIdx++ )
             {
-                QTreeWidgetItem* pCurListViewItem = lvwServers->topLevelItem ( iIdx );
+                CMappedTreeWidgetItem* pCurListViewItem = static_cast<CMappedTreeWidgetItem*> ( lvwServers->topLevelItem ( iIdx ) );
 
                 // if ping time is empty, hide item (if not already hidden)
-                if ( pCurListViewItem->text ( 1 ).isEmpty() && !bShowCompleteRegList )
+                if ( pCurListViewItem->text ( LVC_PING ).isEmpty() && !bShowCompleteRegList )
                 {
                     pCurListViewItem->setHidden ( true );
                 }
@@ -715,13 +798,13 @@ void CConnectDlg::OnConnectClicked()
     if ( CurSelListItemList.count() > 0 )
     {
         // get the parent list view item
-        QTreeWidgetItem* pCurSelTopListItem = GetParentListViewItem ( CurSelListItemList[0] );
+        CMappedTreeWidgetItem* pCurSelTopListItem = GetParentListViewItem ( CurSelListItemList[0] );
 
         // get host address from selected list view item as a string
-        strSelectedAddress = pCurSelTopListItem->data ( 0, Qt::UserRole ).toString();
+        strSelectedAddress = pCurSelTopListItem->data ( LVC_NAME, Qt::UserRole ).toString();
 
         // store selected server name
-        strSelectedServerName = pCurSelTopListItem->text ( 0 );
+        strSelectedServerName = pCurSelTopListItem->text ( LVC_NAME );
 
         // set flag that a server list item was chosen to connect
         bServerListItemWasChosen = true;
@@ -767,26 +850,30 @@ void CConnectDlg::OnTimerPing()
 
     for ( int iIdx = 0; iIdx < iServerListLen; iIdx++ )
     {
+        QTreeWidgetItem* pCurListViewItem = lvwServers->topLevelItem ( iIdx );
+
+        // we need to ask for the server version only if we have not received it
+        const bool bNeedVersion = pCurListViewItem->text ( LVC_VERSION ).isEmpty();
+
         CHostAddress haServerAddress;
 
         // try to parse host address string which is stored as user data
         // in the server list item GUI control element
-        if ( NetworkUtil().ParseNetworkAddress ( lvwServers->topLevelItem ( iIdx )->data ( 0, Qt::UserRole ).toString(),
-                                                 haServerAddress,
-                                                 bEnableIPv6 ) )
+        // the data to be parsed is just IP:port, so no SRV discovery is needed
+        if ( NetworkUtil::ParseNetworkAddressBare ( pCurListViewItem->data ( LVC_NAME, Qt::UserRole ).toString(), haServerAddress, bEnableIPv6 ) )
         {
             // if address is valid, send ping message using a new thread
 #if QT_VERSION >= QT_VERSION_CHECK( 6, 0, 0 )
-            QFuture<void> f = QtConcurrent::run ( &CConnectDlg::EmitCLServerListPingMes, this, haServerAddress );
+            QFuture<void> f = QtConcurrent::run ( &CConnectDlg::EmitCLServerListPingMes, this, haServerAddress, bNeedVersion );
             Q_UNUSED ( f );
 #else
-            QtConcurrent::run ( this, &CConnectDlg::EmitCLServerListPingMes, haServerAddress );
+            QtConcurrent::run ( this, &CConnectDlg::EmitCLServerListPingMes, haServerAddress, bNeedVersion );
 #endif
         }
     }
 }
 
-void CConnectDlg::EmitCLServerListPingMes ( const CHostAddress& haServerAddress )
+void CConnectDlg::EmitCLServerListPingMes ( const CHostAddress& haServerAddress, const bool bNeedVersion )
 {
     // The ping time messages for all servers should not be sent all in a very
     // short time since it showed that this leads to errors in the ping time
@@ -795,22 +882,28 @@ void CConnectDlg::EmitCLServerListPingMes ( const CHostAddress& haServerAddress 
     // block the GUI).
     QThread::msleep ( 11 );
 
+    // first request the server version if we have not already received it
+    if ( bNeedVersion )
+    {
+        emit CreateCLServerListReqVerAndOSMes ( haServerAddress );
+    }
+
     emit CreateCLServerListPingMes ( haServerAddress );
 }
 
 void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr, const int iPingTime, const int iNumClients )
 {
     // apply the received ping time to the correct server list entry
-    QTreeWidgetItem* pCurListViewItem = FindListViewItem ( InetAddr );
+    CMappedTreeWidgetItem* pCurListViewItem = FindListViewItem ( InetAddr );
 
     if ( pCurListViewItem )
     {
         // check if this is the first time a ping time is set
-        const bool bIsFirstPing = pCurListViewItem->text ( 1 ).isEmpty();
+        const bool bIsFirstPing = pCurListViewItem->text ( LVC_PING ).isEmpty();
 
         // update minimum ping time column (invisible, used for sorting) if
         // the new value is smaller than the old value
-        int iMinPingTime = pCurListViewItem->text ( 4 ).toInt();
+        int iMinPingTime = pCurListViewItem->text ( LVC_PING_MIN_HIDDEN ).toInt();
 
         if ( iMinPingTime > iPingTime )
         {
@@ -819,7 +912,7 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
 
             // we pad to a total of 8 characters with zeros to make sure the
             // sorting is done correctly
-            pCurListViewItem->setText ( 4, QString ( "%1" ).arg ( iPingTime, 8, 10, QLatin1Char ( '0' ) ) );
+            pCurListViewItem->setText ( LVC_PING_MIN_HIDDEN, QString ( "%1" ).arg ( iPingTime, 8, 10, QLatin1Char ( '0' ) ) );
         }
 
         // for debugging it is good to see the current ping time in the list
@@ -834,17 +927,17 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
         // Color definition: <= 25 ms green, <= 50 ms yellow, otherwise red
         if ( iMinPingTime <= 25 )
         {
-            pCurListViewItem->setForeground ( 1, Qt::darkGreen );
+            pCurListViewItem->setForeground ( LVC_PING, Qt::darkGreen );
         }
         else
         {
             if ( iMinPingTime <= 50 )
             {
-                pCurListViewItem->setForeground ( 1, Qt::darkYellow );
+                pCurListViewItem->setForeground ( LVC_PING, Qt::darkYellow );
             }
             else
             {
-                pCurListViewItem->setForeground ( 1, Qt::red );
+                pCurListViewItem->setForeground ( LVC_PING, Qt::red );
             }
         }
 
@@ -852,28 +945,28 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
         // certain value
         if ( iMinPingTime > 500 )
         {
-            pCurListViewItem->setText ( 1, ">500 ms" );
+            pCurListViewItem->setText ( LVC_PING, ">500 ms" );
         }
         else
         {
             // prepend spaces so that we can sort correctly (fieldWidth of
             // 4 is sufficient since the maximum width is ">500") (#201)
-            pCurListViewItem->setText ( 1, QString ( "%1 ms" ).arg ( iMinPingTime, 4, 10, QLatin1Char ( ' ' ) ) );
+            pCurListViewItem->setText ( LVC_PING, QString ( "%1 ms" ).arg ( iMinPingTime, 4, 10, QLatin1Char ( ' ' ) ) );
         }
 
         // update number of clients text
-        if ( pCurListViewItem->text ( 5 ).toInt() == 0 )
+        if ( pCurListViewItem->text ( LVC_CLIENTS_MAX_HIDDEN ).toInt() == 0 )
         {
             // special case: reduced server list
-            pCurListViewItem->setText ( 2, QString().setNum ( iNumClients ) );
+            pCurListViewItem->setText ( LVC_CLIENTS, QString().setNum ( iNumClients ) );
         }
-        else if ( iNumClients >= pCurListViewItem->text ( 5 ).toInt() )
+        else if ( iNumClients >= pCurListViewItem->text ( LVC_CLIENTS_MAX_HIDDEN ).toInt() )
         {
-            pCurListViewItem->setText ( 2, QString( "%1" ).arg ( iNumClients, 5, 10, QLatin1Char ( ' ' )  ) + " (full)" );
+            pCurListViewItem->setText ( LVC_CLIENTS, QString().setNum ( iNumClients ) + " (full)" );
         }
         else
         {
-            pCurListViewItem->setText ( 2, QString( "%1" ).arg ( iNumClients, 5, 10, QLatin1Char ( ' ' )  ) + "/" + pCurListViewItem->text ( 5 ) );
+            pCurListViewItem->setText ( LVC_CLIENTS, QString().setNum ( iNumClients ) + "/" + pCurListViewItem->text ( LVC_CLIENTS_MAX_HIDDEN ) );
         }
 
         // check if the number of child list items matches the number of
@@ -887,6 +980,11 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
         if ( bIsFirstPing )
         {
             pCurListViewItem->setHidden ( false );
+
+            if ( pCurListViewItem == lvwServers->currentItem() )
+            {
+                OnCurrentServerItemChanged ( pCurListViewItem, nullptr );
+            }
         }
     }
 
@@ -913,7 +1011,26 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
     UpdateListFilter();
 }
 
-QTreeWidgetItem* CConnectDlg::FindListViewItem ( const CHostAddress& InetAddr )
+void CConnectDlg::SetServerVersionResult ( const CHostAddress& InetAddr, const QString& strVersion )
+{
+    // apply the received server version to the correct server list entry
+    CMappedTreeWidgetItem* pCurListViewItem = FindListViewItem ( InetAddr );
+
+    if ( pCurListViewItem )
+    {
+        pCurListViewItem->setText ( LVC_VERSION, GetDisplayVersion ( strVersion ) );
+
+        // and store sortable mapped version number
+        pCurListViewItem->setData ( LVC_VERSION, Qt::UserRole, mapVersionStr ( strVersion ) );
+
+        if ( pCurListViewItem == lvwServers->currentItem() )
+        {
+            OnCurrentServerItemChanged ( pCurListViewItem, nullptr );
+        }
+    }
+}
+
+CMappedTreeWidgetItem* CConnectDlg::FindListViewItem ( const CHostAddress& InetAddr )
 {
     const int iServerListLen = lvwServers->topLevelItemCount();
 
@@ -921,16 +1038,16 @@ QTreeWidgetItem* CConnectDlg::FindListViewItem ( const CHostAddress& InetAddr )
     {
         // compare the received address with the user data string of the
         // host address by a string compare
-        if ( !lvwServers->topLevelItem ( iIdx )->data ( 0, Qt::UserRole ).toString().compare ( InetAddr.toString() ) )
+        if ( !lvwServers->topLevelItem ( iIdx )->data ( LVC_NAME, Qt::UserRole ).toString().compare ( InetAddr.toString() ) )
         {
-            return lvwServers->topLevelItem ( iIdx );
+            return static_cast<CMappedTreeWidgetItem*> ( lvwServers->topLevelItem ( iIdx ) );
         }
     }
 
     return nullptr;
 }
 
-QTreeWidgetItem* CConnectDlg::GetParentListViewItem ( QTreeWidgetItem* pItem )
+CMappedTreeWidgetItem* CConnectDlg::GetParentListViewItem ( QTreeWidgetItem* pItem )
 {
     // check if the current item is already the top item, i.e. the parent
     // query fails and returns null
@@ -938,12 +1055,12 @@ QTreeWidgetItem* CConnectDlg::GetParentListViewItem ( QTreeWidgetItem* pItem )
     {
         // we only have maximum one level, i.e. if we call the parent function
         // we are at the top item
-        return pItem->parent();
+        return static_cast<CMappedTreeWidgetItem*> ( pItem->parent() );
     }
     else
     {
         // this item is already the top item
-        return pItem;
+        return static_cast<CMappedTreeWidgetItem*> ( pItem );
     }
 }
 
@@ -985,4 +1102,39 @@ void CConnectDlg::UpdateDirectoryComboBox()
             cbxDirectory->addItem ( pSettings->vstrDirectoryAddress[i], i );
         }
     }
+}
+
+void CConnectDlg::OnCurrentServerItemChanged ( QTreeWidgetItem* current, QTreeWidgetItem* )
+{
+    Q_UNUSED ( current );
+
+    // Announce the currently selected server or client to screen readers.
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 8, 0 )
+    if ( !current )
+        return;
+
+    if ( !current->parent() && current->text ( LVC_PING ).isEmpty() )
+    {
+        return;
+    }
+
+    QString announcement;
+    if ( current->parent() )
+    {
+        // It's a client
+        announcement         = current->text ( LVC_NAME );
+        QVariant countryData = current->data ( LVC_NAME, Qt::UserRole );
+        if ( countryData.isValid() )
+        {
+            announcement += ", " + countryData.toString();
+        }
+    }
+    else
+    {
+        // It's a server
+        announcement = current->text ( LVC_NAME ) + ", " + tr ( "Ping" ) + " " + current->text ( LVC_PING ) + ", " + current->text ( LVC_CLIENTS ) +
+                       ", " + current->text ( LVC_LOCATION ) + ", " + current->text ( LVC_VERSION );
+    }
+    QAccessible::updateAccessibility ( new QAccessibleAnnouncementEvent ( lvwServers, announcement ) );
+#endif
 }

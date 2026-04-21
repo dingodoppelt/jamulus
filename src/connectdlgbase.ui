@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>521</width>
+    <width>648</width>
     <height>493</height>
    </rect>
   </property>
@@ -86,6 +86,11 @@
        <string>Location</string>
       </property>
      </column>
+     <column>
+      <property name="text">
+       <string>Version</string>
+      </property>
+     </column>
     </widget>
    </item>
    <item>
@@ -108,28 +113,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="butDeleteServerAddr">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Maximum" vsizetype="Ignored">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>24</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string notr="true">⌫</string>
-       </property>
-      </widget>
+      <widget class="QToolButton" name="tbtDeleteServerAddr"/>
      </item>
     </layout>
    </item>

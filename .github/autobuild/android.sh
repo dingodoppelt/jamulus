@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2022-2024
+# Copyright (c) 2022-2026
 #
 # Author(s):
 #  Christian Hoffmann
@@ -32,7 +32,7 @@ COMMANDLINETOOLS_VERSION=6858069
 ANDROID_NDK_VERSION=r21d
 ANDROID_PLATFORM=android-30
 ANDROID_BUILD_TOOLS=30.0.2
-AQTINSTALL_VERSION=3.1.12
+AQTINSTALL_VERSION=3.3.0
 QT_VERSION=5.15.2
 
 # Only variables which are really needed by sub-commands are exported.

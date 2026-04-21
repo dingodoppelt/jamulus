@@ -62,7 +62,7 @@ jobs:
     # Check if we are doing a release or just a normal build.
     # This must be done before actually building the app to find out where to upload the binaries and if we need to create a Github release.
     name:                           Build vars & Github release (if required)
-    runs-on:                        ubuntu-20.04
+    runs-on:                        ubuntu-24.04-arm
     outputs:
       publish_to_release:           ${{ steps.get-build-vars.outputs.PUBLISH_TO_RELEASE }}
       tag_name:                     ${{ steps.get-build-vars.outputs.RELEASE_TAG }}
@@ -75,7 +75,7 @@ jobs:
         contents:                   write
     steps:
       - name:                       Checkout code
-        uses:                       actions/checkout@v4
+        uses:                       actions/checkout@v6
 
       - name:                       Determine release version, type and prerelease variables
         run:                        ./.github/autobuild/get_build_vars.py
@@ -129,7 +129,7 @@ jobs:
               echo 'Triggered by a tag push, building all targets'
               build_all_targets 'true'
             fi
-            if [[ "${GITHUB_REF}" == "refs/heads/autobuild"* ]]; then
+            if [[ "${GITHUB_REF}" =~ ^refs/heads/autobuild ]]; then
               echo 'Triggered by a push to an autobuild* branch, building all targets'
               build_all_targets 'true'
             fi
@@ -195,7 +195,7 @@ jobs:
         config:
           - config_name:            Android .apk (artifact+codeQL)
             target_os:              android
-            building_on_os:         ubuntu-20.04
+            building_on_os:         ubuntu-22.04
             base_command:           ./.github/autobuild/android.sh
             run_codeql:             true
             is_main_build_target:   true
@@ -212,53 +212,49 @@ jobs:
 
           - config_name:            Linux .deb armhf (artifacts)
             target_os:              linux
-            building_on_os:         ubuntu-22.04
+            building_on_os:         ubuntu-22.04-arm
             building_container:     ubuntu:20.04
             base_command:           TARGET_ARCH=armhf ./.github/autobuild/linux_deb.sh
             run_codeql:             false
 
           - config_name:            Linux .deb arm64 (artifacts)
             target_os:              linux
-            building_on_os:         ubuntu-22.04
+            building_on_os:         ubuntu-22.04-arm
             building_container:     ubuntu:20.04
             base_command:           TARGET_ARCH=arm64 ./.github/autobuild/linux_deb.sh
             run_codeql:             false
 
           - config_name:            MacOS (artifacts)
             target_os:              macos
-            building_on_os:         macos-12
-            base_command:           QT_VERSION=6.6.3 SIGN_IF_POSSIBLE=1 TARGET_ARCHS="x86_64 arm64" ./.github/autobuild/mac.sh
+            building_on_os:         macos-15
+            base_command:           QT_VERSION=6.10.2 SIGN_IF_POSSIBLE=1 TARGET_ARCHS="x86_64 arm64" ./.github/autobuild/mac.sh
             # Disable CodeQL on mac as it interferes with signing the binaries (signing hangs, see #2563 and #2564)
             run_codeql:             false
-            # Default Xcode which runs on macos-12:
-            xcode_version:          14.2.0
+            xcode_version:          16.3.0
             is_main_build_target:   true
 
           # Reminder: If Legacy is removed, be sure to add a dedicated job for CodeQL again.
           - config_name:            MacOS Legacy (artifacts+CodeQL)
             target_os:              macos
-            building_on_os:         macos-12
-            base_command:           QT_VERSION=5.9.9 SIGN_IF_POSSIBLE=0 ARTIFACT_SUFFIX=_legacy ./.github/autobuild/mac.sh
+            building_on_os:         macos-15-intel
+            base_command:           QT_VERSION=5.15.2 SIGN_IF_POSSIBLE=0 ARTIFACT_SUFFIX=_legacy ./.github/autobuild/mac.sh
             # Enable CodeQL on mac legacy as this version does not get signed
             run_codeql:             true
-            # For Qt5 on Mac, we need to use an unsupported SDK version as macOS 12 doesn't
-            # support Xcode 12.1 which still ships SDK 10.15.
+            # macos-15-intel ships with Xcode 16.x; while Qt5 is older, Xcode 16 still supports building it
             # https://developer.apple.com/support/xcode/
             # https://xcodereleases.com/
-            xcode_version:          14.2.0
+            xcode_version:          16.3.0
             is_main_build_target:   true
 
           - config_name:            iOS (artifacts)
             target_os:              ios
-            building_on_os:         macos-11
+            building_on_os:         macos-15
             base_command:           QT_VERSION=5.15.2 ./.github/autobuild/ios.sh
             # Build failed with CodeQL enabled when last tested 03/2022 (#2490).
             # There are no hints that iOS is supposed to be supported by CodeQL.
             # Therefore, disable it:
             run_codeql:             false
-            # Unfortunately, more modern Xcode versions no longer seem to support
-            # Qt 5.15.2. Therefore upgrading to Qt6 is needed in the medium term (#2711)
-            xcode_version:          12.5.1
+            xcode_version:          26.2
 
           - config_name:            Windows (artifact+codeQL)
             target_os:              windows
@@ -288,7 +284,7 @@ jobs:
     steps:
       - name:                       Select Xcode version for Mac
         if:                         matrix.config.target_os == 'macos' || matrix.config.target_os == 'ios'
-        uses:                       maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd
+        uses:                       maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90
         with:
           xcode-version:            ${{ matrix.config.xcode_version }}
 
@@ -312,23 +308,24 @@ jobs:
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
       - name:                       Checkout code
-        uses:                       actions/checkout@v4
+        uses:                       actions/checkout@v6
         with:
-          submodules:               true
+          # only Android needs the oboe submodule, so don't fetch it for other builds
+          submodules:               ${{ matrix.config.target_os == 'android' }}
           fetch-depth:              ${{ matrix.config.checkout_fetch_depth || '1' }}
 
       - name:                       Cache Mac dependencies
         if:                         matrix.config.target_os == 'macos'
-        uses:                       actions/cache@v4
+        uses:                       actions/cache@v5
         with:
           path: |
-            /usr/local/opt/qt
-            ~/Library/Cache/jamulus-homebrew-bottles
+            ~/qt
+            ~/Library/Cache/jamulus-dependencies
           key:                      ${{ matrix.config.target_os }}-${{ hashFiles('.github/workflows/autobuild.yml', '.github/autobuild/mac.sh', 'mac/deploy_mac.sh') }}-${{ matrix.config.base_command }}
 
       - name:                       Cache Windows dependencies
         if:                         matrix.config.target_os == 'windows'
-        uses:                       actions/cache@v4
+        uses:                       actions/cache@v5
         with:
           path: |
             C:\Qt
@@ -340,7 +337,7 @@ jobs:
 
       - name:                       Cache Android dependencies
         if:                         matrix.config.target_os == 'android'
-        uses:                       actions/cache@v4
+        uses:                       actions/cache@v5
         with:
           path: |
             /opt/Qt
@@ -355,7 +352,7 @@ jobs:
 
       - name:                       Initialize CodeQL
         if:                         matrix.config.run_codeql
-        uses:                       github/codeql-action/init@v3
+        uses:                       github/codeql-action/init@v4
         with:
           languages: 'cpp'
 
@@ -363,10 +360,23 @@ jobs:
         id:                         build
         run:                        ${{ matrix.config.base_command }} build
         env:
+          ## Creating certificates
+          #  Generate the certificates from Xcode. You can Manage Certificates in Apple Accounts settings or the Apple Developer account page.
+          #  In Xcode Settings: Right click on Developer ID Application, Mac App Distribution (does not exist, maybe also developer id application??) and Mac Installer Distribution certificates.
+          #  Select "Export Certificate"
+          #  Set a secure password.
+          #  For every certificate, export it as base64 encoded string with `base64 -i certificate.p12`
+          #  Set the certificates based on the variables below
           JAMULUS_BUILD_VERSION:    ${{ needs.create_release.outputs.build_version }}
-          MACOS_CERTIFICATE:        ${{ secrets.MACOS_CERT}}
-          MACOS_CERTIFICATE_PWD:    ${{ secrets.MACOS_CERT_PWD }}
-          MACOS_CERTIFICATE_ID:     ${{ secrets.MACOS_CERT_ID }}
+          MACOS_CERTIFICATE_DEV_ID_APPLICATION:        ${{ secrets.MACOS_CERT }} # Base64 encoded Developer ID Application certificate. See https://help.apple.com/xcode/mac/current/#/dev154b28f09
+          MACOS_CERTIFICATE_DEV_ID_APPLICATION_PWD:    ${{ secrets.MACOS_CERT_PWD }} # Password protecting secrets.MACOS_CERTIFICATE_DEV_ID_APPLICATION
+          MACOS_CERTIFICATE_DEV_ID_APPLICATION_ID:     ${{ secrets.MACOS_CERT_ID }} # Certificate ID of secrets.MACOS_CERTIFICATE_DEV_ID_APPLICATION. If unknown, import secrets.MACOS_CERT into keychain and get the hash via "security find-identity -v"
+          MACOS_CERTIFICATE_INST_DISTRIBUTION:      ${{ secrets.MACAPP_INST_CERT }} # Base64 encoded Mac Installer Distribution certificate
+          MACOS_CERTIFICATE_INST_DISTRIBUTION_PWD:  ${{ secrets.MACAPP_INST_CERT_PWD }}
+          MACOS_CERTIFICATE_INST_DISTRIBUTION_ID:   ${{ secrets.MACAPP_INST_CERT_ID }}
+          MAC_STORE_APP_CERT:       ${{ secrets.MACAPP_CERT }} # Base64 encoded Mac App Distribution certificate
+          MAC_STORE_APP_CERT_PWD:   ${{ secrets.MACAPP_CERT_PWD }}
+          MAC_STORE_APP_CERT_ID:    ${{ secrets.MACAPP_CERT_ID }}
           NOTARIZATION_PASSWORD:    ${{ secrets.NOTARIZATION_PASSWORD }}
           KEYCHAIN_PASSWORD:        ${{ secrets.KEYCHAIN_PASSWORD }}
           MACOS_CA_PUBLICKEY:       ${{ secrets.MACOS_CA_PUBKEY }}
@@ -379,7 +389,7 @@ jobs:
       - name:                       Upload Artifact 1 to Job
         # Every build job has at least one artifact. Therefore, no `if` here.
         # If the artifact is missing, this should fail.
-        uses:                       actions/upload-artifact@v4
+        uses:                       actions/upload-artifact@v7
         with:
           name:                     ${{ steps.get-artifacts.outputs.artifact_1 }}
           path:                     deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
@@ -388,7 +398,7 @@ jobs:
 
       - name:                       Upload Artifact 2 to Job
         if:                         steps.get-artifacts.outputs.artifact_2
-        uses:                       actions/upload-artifact@v4
+        uses:                       actions/upload-artifact@v7
         with:
           name:                     ${{ steps.get-artifacts.outputs.artifact_2 }}
           path:                     deploy/${{ steps.get-artifacts.outputs.artifact_2 }}
@@ -401,13 +411,13 @@ jobs:
                                     needs.create_release.outputs.publish_to_release == 'true' &&
                                     steps.build.outputs.macos_notarize == 'true'
         id:                         notarize-macOS-app
-        uses:                       lando/notarize-action@4f5869b09386e8336802159031e4189e0919ae20
-        with:
-          product-path:             deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
-          primary-bundle-id:        io.jamulus.Jamulus
-          appstore-connect-username: ${{ secrets.NOTARIZATION_USERNAME }}
-          appstore-connect-password: ${{ secrets.NOTARIZATION_PASSWORD }}
-          appstore-connect-team-id:  ${{ secrets.NOTARIZATION_TEAM_ID }}
+        run:                        ${{ matrix.config.base_command }} notarize
+        env:
+          JAMULUS_BUILD_VERSION:    ${{ needs.create_release.outputs.build_version }}
+          ARTIFACT_PATH:            deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
+          NOTARIZATION_USERNAME:    ${{ secrets.NOTARIZATION_USERNAME }} # Apple ID for notarization
+          NOTARIZATION_PASSWORD:    ${{ secrets.NOTARIZATION_PASSWORD }} # App specific password for Apple ID
+          APPLE_TEAM_ID:            ${{ secrets.NOTARIZATION_TEAM_ID }} # Team ID from App Store Connect
 
       - name:                       Staple macOS Release Build
         if:                         >-
@@ -415,23 +425,29 @@ jobs:
                                     needs.create_release.outputs.publish_to_release == 'true' &&
                                     steps.build.outputs.macos_notarize == 'true'
         id:                         staple-macOS-app
-        uses:                       BoundfoxStudios/action-xcode-staple@cd6c16fb6a3dfb365203a41343926f81e813afad
-        with:
-          product-path:             deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
+        run:                        ${{ matrix.config.base_command }} staple
+        env:
+          JAMULUS_BUILD_VERSION:    ${{ needs.create_release.outputs.build_version }}
+          ARTIFACT_PATH:            deploy/${{ steps.get-artifacts.outputs.artifact_1 }}
 
-      - name:                       Deploy Artifacts to Release
+      - name:                       Deploy Artifact 1 to Release
         if:                         needs.create_release.outputs.publish_to_release == 'true'
-        id:                         upload-release-assets
+        id:                         upload-release-asset1
         run:                        >
-          gh release upload "${{ needs.create_release.outputs.tag_name }}" "deploy/${{ steps.get-artifacts.outputs.artifact_1 }}" "deploy/${{ steps.get-artifacts.outputs.artifact_2 }}" --clobber
-          ||
           gh release upload "${{ needs.create_release.outputs.tag_name }}" "deploy/${{ steps.get-artifacts.outputs.artifact_1 }}" --clobber
         env:
           GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
-
+      - name:                       Deploy Artifact 2 to Release
+        if:                         needs.create_release.outputs.publish_to_release == 'true' &&
+                                    steps.get-artifacts.outputs.artifact_2
+        id:                         upload-release-asset2
+        run:                        >
+          gh release upload "${{ needs.create_release.outputs.tag_name }}" "deploy/${{ steps.get-artifacts.outputs.artifact_2 }}" --clobber
+        env:
+          GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
       - name:                       Perform CodeQL Analysis
         if:                         matrix.config.run_codeql
-        uses:                       github/codeql-action/analyze@v3
+        uses:                       github/codeql-action/analyze@v4
 
   create_deb_repo:
     name:                           Create files for .deb repository (if requested)
@@ -462,7 +478,7 @@ jobs:
       # Unfortunately download-artifact action doesn't support wild card downloads. Thus downloading all artifacts
       - name:                       Download all artifacts
         if:                         env.GPG_REPO_KEY_MISSING == 'false'
-        uses:                       actions/download-artifact@v4
+        uses:                       actions/download-artifact@v8
         with:
           path:                     releasedl/
       - name:                       Create Debian repository
