@@ -1,4 +1,10 @@
-VERSION = 3.10.0dev
+VERSION = 3.11.0dev
+
+# Using lrelease and embed_translations only works for Qt 5.12 or later.
+# See https://github.com/jamulussoftware/jamulus/pull/3288 for these changes.
+lessThan(QT_MAJOR_VERSION, 5) | equals(QT_MAJOR_VERSION, 5) : lessThan(QT_MINOR_VERSION, 12) {
+    error(Jamulus requires at least Qt5.12. See https://github.com/jamulussoftware/jamulus/pull/3288)
+}
 
 # use target name which does not use a capital letter at the beginning
 contains(CONFIG, "noupcasename") {
@@ -9,7 +15,7 @@ contains(CONFIG, "noupcasename") {
 # allow detailed version info for intermediate builds (#475)
 contains(VERSION, .*dev.*) {
     exists(".git/config") {
-        GIT_DESCRIPTION=$$system(git describe --match=xxxxxxxxxxxxxxxxxxxx --always --abbrev --dirty) # the match should never match
+        GIT_DESCRIPTION=$$system(git describe --match=xxxxxxxxxxxxxxxxxxxx --always --abbrev --dirty):$$system(git show -s "--pretty=format:%ct") # commit_id(-dirty):seconds_since_epoch
         VERSION = "$$VERSION"-$$GIT_DESCRIPTION
         message("building version \"$$VERSION\" (intermediate in git repository)")
     } else {
@@ -22,7 +28,9 @@ contains(VERSION, .*dev.*) {
 
 CONFIG += qt \
     thread \
-    lrelease
+    lrelease \
+    embed_translations \
+    debug_and_release
 
 QT += network \
     xml \
@@ -42,10 +50,10 @@ contains(CONFIG, "headless") {
     QT += multimedia
 }
 
-# Hint: When adding new translations, make sure to update
-# DISTFILES (above) and src/resources.qrc as well.
-LRELEASE_DIR = src/translation
-TRANSLATIONS = src/translation/translation_de_DE.ts \
+# Do not set LRELEASE_DIR explicitly when using embed_translations.
+# It doesn't work with multiple targets or architectures.
+TRANSLATIONS = src/translation/translation_ja_JP.ts \
+    src/translation/translation_de_DE.ts \
     src/translation/translation_fr_FR.ts \
     src/translation/translation_ko_KR.ts \
     src/translation/translation_pt_PT.ts \
@@ -54,6 +62,7 @@ TRANSLATIONS = src/translation/translation_de_DE.ts \
     src/translation/translation_nb_NO.ts \
     src/translation/translation_nl_NL.ts \
     src/translation/translation_pl_PL.ts \
+    src/translation/translation_ru_RU.ts \
     src/translation/translation_sk_SK.ts \
     src/translation/translation_it_IT.ts \
     src/translation/translation_sv_SE.ts \
@@ -140,6 +149,11 @@ win32 {
             INCLUDEPATH += "$${programfilesdir}/JACK2/include"
             LIBS += "$${programfilesdir}/JACK2/lib/$${libjackname}"
         } else {
+            message(Using native Windows MIDI.)
+
+            HEADERS += src/sound/midi-win/midi.h
+            SOURCES += src/sound/midi-win/midi.cpp
+
             message(Using ASIO.)
             message(Please review the ASIO SDK licence.)
 
@@ -175,7 +189,7 @@ win32 {
     HEADERS += src/mac/activity.h src/mac/badgelabel.h
     OBJECTIVE_SOURCES += src/mac/activity.mm src/mac/badgelabel.mm
     CONFIG += x86
-    QMAKE_TARGET_BUNDLE_PREFIX = io.jamulus
+    QMAKE_TARGET_BUNDLE_PREFIX = app.jamulussoftware
 
     OSX_ENTITLEMENTS.files = mac/Jamulus.entitlements
     OSX_ENTITLEMENTS.path = Contents/Resources
@@ -190,11 +204,7 @@ win32 {
         MACOSX_BUNDLE_ICON.path = Contents/Resources
         QMAKE_BUNDLE_DATA += MACOSX_BUNDLE_ICON
     } else {
-        equals(QT_VERSION, "5.9.9") {
-            QMAKE_INFO_PLIST = mac/Info-make-legacy.plist
-        } else {
-            QMAKE_INFO_PLIST = mac/Info-make.plist
-        }
+        QMAKE_INFO_PLIST = mac/Info-make.plist
     }
 
     LIBS += -framework CoreFoundation \
@@ -226,12 +236,14 @@ win32 {
     }
 
 } else:ios {
+    CONFIG+=add_ios_ffmpeg_libraries # QTBUG-129651
+    QMAKE_ASSET_CATALOGS += src/res/iOSIcons.xcassets
     QMAKE_INFO_PLIST = ios/Info.plist
     OBJECTIVE_SOURCES += src/ios/ios_app_delegate.mm
     HEADERS += src/ios/ios_app_delegate.h
     HEADERS += src/sound/coreaudio-ios/sound.h
     OBJECTIVE_SOURCES += src/sound/coreaudio-ios/sound.mm
-    QMAKE_TARGET_BUNDLE_PREFIX = io.jamulus
+    QMAKE_TARGET_BUNDLE_PREFIX = app.jamulussoftware
     LIBS += -framework AVFoundation \
         -framework AudioToolbox
 } else:android {
@@ -361,7 +373,8 @@ win32 {
     }
 }
 
-RCC_DIR = src/res
+# Do not set RCC_DIR explicitly when using embed_translations.
+# It doesn't work with multiple targets or architectures.
 RESOURCES += src/resources.qrc
 
 FORMS_GUI = src/aboutdlgbase.ui \
@@ -374,7 +387,8 @@ FORMS_GUI = src/aboutdlgbase.ui \
         src/connectdlgbase.ui
 }
 
-HEADERS += src/buffer.h \
+HEADERS += src/plugins/audioreverb.h \
+    src/buffer.h \
     src/channel.h \
     src/global.h \
     src/protocol.h \
@@ -465,8 +479,7 @@ HEADERS_OPUS = libs/opus/celt/arch.h \
     libs/opus/silk/typedef.h \
     libs/opus/src/analysis.h \
     libs/opus/src/mlp.h \
-    libs/opus/src/opus_private.h \
-    libs/opus/src/tansig_table.h
+    libs/opus/src/opus_private.h
 
 HEADERS_OPUS_ARM = libs/opus/celt/arm/armcpu.h \
     libs/opus/silk/arm/biquad_alt_arm.h \
@@ -482,7 +495,8 @@ HEADERS_OPUS_X86 = libs/opus/celt/x86/celt_lpc_sse.h \
     libs/opus/celt/x86/x86cpu.h \
     $$files(libs/opus/silk/x86/*.h)
 
-SOURCES += src/buffer.cpp \
+SOURCES += src/plugins/audioreverb.cpp \
+    src/buffer.cpp \
     src/channel.cpp \
     src/main.cpp \
     src/protocol.cpp \
@@ -638,6 +652,7 @@ SOURCES_OPUS = libs/opus/celt/bands.c \
     libs/opus/silk/VAD.c \
     libs/opus/silk/VQ_WMat_EC.c \
     libs/opus/src/analysis.c \
+    libs/opus/src/extensions.c \
     libs/opus/src/mlp.c \
     libs/opus/src/mlp_data.c \
     libs/opus/src/opus.c \
@@ -698,7 +713,6 @@ DISTFILES += ChangeLog \
     docs/TRANSLATING.md \
     linux/jamulus.desktop.in \
     linux/jamulus-server.desktop.in \
-    mac/Info-make-legacy.plist \
     mac/Info-make.plist \
     mac/Info-xcode.plist \
     mac/Jamulus.entitlements \
@@ -706,34 +720,21 @@ DISTFILES += ChangeLog \
     src/res/io.jamulus.jamulus.png \
     src/res/io.jamulus.jamulus.svg \
     src/res/io.jamulus.jamulusserver.svg \
-    src/translation/translation_de_DE.qm \
-    src/translation/translation_fr_FR.qm \
-    src/translation/translation_ko_KR.qm \
-    src/translation/translation_pt_PT.qm \
-    src/translation/translation_pt_BR.qm \
-    src/translation/translation_es_ES.qm \
-    src/translation/translation_nb_NO.qm \
-    src/translation/translation_nl_NL.qm \
-    src/translation/translation_pl_PL.qm \
-    src/translation/translation_it_IT.qm \
-    src/translation/translation_sv_SE.qm \
-    src/translation/translation_sk_SK.qm \
-    src/translation/translation_zh_CN.qm \
-    src/res/CLEDBlack.png \
     src/res/CLEDBlackSmall.png \
-    src/res/CLEDDisabledSmall.png \
-    src/res/CLEDGreen.png \
     src/res/CLEDGreenSmall.png \
     src/res/CLEDGrey.png \
-    src/res/CLEDGreySmall.png \
-    src/res/CLEDRed.png \
     src/res/CLEDRedSmall.png \
-    src/res/CLEDYellow.png \
     src/res/CLEDYellowSmall.png \
-    src/res/LEDBlackSmall.png \
-    src/res/LEDGreenSmall.png \
-    src/res/LEDRedSmall.png \
-    src/res/LEDYellowSmall.png \
+    src/res/CLEDBlackBig.png \
+    src/res/CLEDBlackSrc.png \
+    src/res/CLEDDisabled.png \
+    src/res/CLEDGreenBig.png \
+    src/res/CLEDGreenSrc.png \
+    src/res/CLEDGreySrc.png \
+    src/res/CLEDRedBig.png \
+    src/res/CLEDRedSrc.png \
+    src/res/CLEDYellowBig.png \
+    src/res/CLEDYellowSrc.png \
     src/res/IndicatorGreen.png \
     src/res/IndicatorYellow.png \
     src/res/IndicatorRed.png \
@@ -743,13 +744,15 @@ DISTFILES += ChangeLog \
     src/res/faderhandle.png \
     src/res/faderhandlesmall.png \
     src/res/HLEDGreen.png \
-    src/res/HLEDGreenSmall.png \
     src/res/HLEDBlack.png \
-    src/res/HLEDBlackSmall.png \
     src/res/HLEDRed.png \
-    src/res/HLEDRedSmall.png \
     src/res/HLEDYellow.png \
-    src/res/HLEDYellowSmall.png \
+    src/res/HLEDBlackSrc.png \
+    src/res/HLEDGreenSrc.png \
+    src/res/HLEDGrey.png \
+    src/res/HLEDGreySrc.png \
+    src/res/HLEDRedSrc.png \
+    src/res/HLEDYellowSrc.png \
     src/res/ledbuttonnotpressed.png \
     src/res/ledbuttonpressed.png \
     src/res/fronticon.png \
@@ -759,6 +762,7 @@ DISTFILES += ChangeLog \
     src/res/mutediconorange.png \
     src/res/servertrayiconactive.png \
     src/res/servertrayiconinactive.png \
+    src/res/installerbackground.png \
     src/res/instruments/accordeon.png \
     src/res/instruments/aguitar.png \
     src/res/instruments/bassguitar.png \
@@ -1060,6 +1064,12 @@ DISTFILES += ChangeLog \
     src/res/flags/za.png \
     src/res/flags/zm.png \
     src/res/flags/zw.png \
+    src/res/flags/catalonia.png \
+    src/res/flags/england.png \
+    src/res/flags/europeanunion.png \
+    src/res/flags/scotland.png \
+    src/res/flags/wales.png \
+    src/res/flags/readme.txt \
     tools/changelog-helper.sh \
     tools/check-wininstaller-translations.sh \
     tools/checkkeys.pl \
@@ -1074,7 +1084,6 @@ DISTFILES += ChangeLog \
 DISTFILES_OPUS += libs/opus/AUTHORS \
     libs/opus/ChangeLog \
     libs/opus/COPYING \
-    libs/opus/INSTALL \
     libs/opus/NEWS \
     libs/opus/README \
     libs/opus/celt/arm/armopts.s.in \
@@ -1171,6 +1180,12 @@ contains(CONFIG, "opus_shared_lib") {
 contains(CONFIG, "disable_version_check") {
     message(The version check is disabled.)
     DEFINES += DISABLE_VERSION_CHECK
+}
+
+# disable SRV resolution in DNS if requested (#3556)
+contains(CONFIG, "disable_srv_dns") {
+    message(The use of SRV records in DNS is disabled.)
+    DEFINES += DISABLE_SRV_DNS
 }
 
 # Enable formatting all code via `make clang_format`.

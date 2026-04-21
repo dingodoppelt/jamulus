@@ -1,4 +1,271 @@
-### 3.10.0dev <- NOTE: the release version number will be 3.10.1 ###
+### 3.11.0dev <- NOTE: the release version number will be 3.12.0 ###
+
+- Extended SRV record support (#3556).
+  (contributed by @softins, @rdica)
+
+- Client: Bug: Fix missing variables passed to connect dialog (#3578).
+  (contributed by @ann0see)
+
+- Client: Use the commit time rather than commit id for sort in --showallserver (#3562).
+  (contributed by @pljones)
+
+- Client: Fix sorting of version number in connect dialog with --showallservers (#3557).
+  (contributed by @softins)
+
+- Client: Display version for each server in the Connect dialog (#3416).
+  (contributed by @softins)
+
+- Client: Added "Sort by Channel" to mixer view (#3418).
+  (contributed by @pljones)
+
+- Client: allocate channel numbers locally and always give user own channel of 0 (#3426).
+  (contributed by @softins)
+
+- Client: Apply rate-limiting to Pan change messages to eliminate lag in their effect (#3429).
+  (contributed by @softins)
+
+- Client: Added native MIDI support to the ASIO (non-Jack) Windows build (#3431).
+  (contributed by @softins)
+
+- Client RPC: Added a jamulusclient/setFaderLevel method to the RPC remote interface (#3571).
+  (contributed by @corrados)
+
+- Client RPC: Added jamulusclient/pollServerList methods and jamulusclient/receivedServerList notification to JSON-RPC interface (#3479).
+  (contributed by @ann0see)
+
+- Server: Disabled swap memory usage on Linux (#3381).
+  (contributed by @dtinth)
+
+- Server: The `-m`/`--htmlstatus` option is considered deprecated and has been replaced by JSON RPC's `jamulusserver/getClients` method. The `-m` option will be removed in future (#3398).
+  (contributed by @ann0see)
+
+- Server RPC: Added jamulusserver/setDirectory request (#3533).
+  (contributed by @pljones)
+
+- Windows: Avoid screensaver or sleeping if connected to a server (#3498).
+  (contributed by @ann0see)
+
+- Linux: Reorder service initialization to wait for network interface before starting the Server (#3440).
+  (contributed by @rdica)
+
+- iOS/Android: Use compact view as default view on mobile OS for better usability (#3587).
+  (contributed by @ann0see)
+
+- iOS: Fixed GUI issue preventing the connect dialog to show correctly (#3343).
+  (contributed by @ann0see)
+
+- iOS: Add notes for iOS compiling documentation (#3594).
+  (contributed by @ann0see)
+
+- iOS: Add workaround from QTBUG-129651 for iOS FFMPEG linking (#3581).
+  (contributed by @ann0see)
+
+- iOS: Upgrade build for Qt 6 compatibility (#3445).
+  (contributed by @ann0see)
+
+- iOS: Return correct operating system version if run as server (#3360).
+  (contributed by @ann0see)
+
+- iOS: Added icon to iOS app (#3410).
+  (contributed by @ann0see)
+
+- iOS: Fix app hang if the language was changed (#3411).
+  (contributed by @ann0see)
+
+- iOS: Fix crash on Qt6 after closing the chat window (#3413).
+  (contributed by @ann0see)
+
+- Added Japanese translation (ja_JP) (#3568).
+  (contributed by @tsukurun)
+
+- Translations updated from Hosted Weblate (#3540, #3453, #3441, #3388).
+  (contributed by @weblate)
+
+- Added link to privacy policy (#3586).
+  (contributed by @ann0see)
+
+- Tools: checkkeys.pl now automatically finds the translation directory (#3590).
+  (contributed by @softins)
+
+- Tools: updated checkkeys.pl to use XML::LibXML (#3558).
+  (contributed by @softins)
+
+- Tools: added improvements to changelog-helper.sh (#3459).
+  (contributed by @softins)
+
+- Tools: Added missing Makefile.in files to Opus 1.5.2 distro (#3488).
+  (contributed by @softins)
+
+- Build: Improvements and ASIO fix for Windows dependencies (#3612).
+  (contributed by @softins)
+
+- Build: Windows: Move ASIO to GPL (#3553).
+  (contributed by @gilgongo)
+
+- Build: Updated Opus library to v1.5.2 (#3409).
+  (contributed by @softins)
+
+- Build: Upgrade Android Runner to Ubuntu 22.04 (#3444).
+  (contributed by @ann0see)
+
+- Build: Switch Linux ARM builds to be built on arm runners (#3470).
+  (contributed by @ann0see)
+
+- Build: Provide continued legacy macOS support (but moving Sierra to High Sierra as minimum target) (#3579).
+  (contributed by @pljones)
+
+- Build: Updated the Github build runner for MacOS Legacy to macos-13 (#3436).
+  (contributed by @softins)
+
+- Build: Bump ASIO-SDK from asiosdk_2.3.3_2019-06-14 to ASIO-SDK_2.3.4_2025-10-15 (#3617).
+  (contributed by @app/github-actions)
+
+- Build: Bump Qt6 from 6.10.1 to 6.10.2 (#3616).
+  (contributed by @app/github-actions)
+
+- Build: Updated bundled Qt6 to version 6.9.1 (iOS 6.7.3) (#3407, #3262).
+  (contributed by @app/github-actions)
+
+- Build: Updated Windows Installer base (NSIS) to version 3.11 (#3483).
+  (contributed by @app/github-actions)
+
+- Build: Updated create-dmg (macOS) to version 1.2.3 (#3561).
+  (contributed by @app/github-actions)
+
+- Build: Bump actions/checkout from 4 to 6 (#3566).
+  (contributed by @app/dependabot)
+
+- Build: Bump github/codeql-action from 3 to 4 (#3549).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/cache from 4 to 5 (#3574).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/upload-artifact from 4 to 6 (#3576).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/download-artifact from 4 to 7 (#3575).
+  (contributed by @app/dependabot)
+
+- Build: Bump DoozyX/clang-format-lint-action from 0.18.2 to 0.20 (#3490).
+  (contributed by @app/dependabot)
+
+- Build: Bump DoozyX/clang-format-lint-action from 11b773b1598aa4ae3b32f023701bca5201c3817d to c71d0bf4e21876ebec3e5647491186f8797fde31 (#3368).
+  (contributed by @app/dependabot)
+
+
+### 3.11.0 (2024-09-21) ###
+
+- Client: Added "Delete Entry" button to Advanced Settings, Custom Directories (#3260).
+  (contributed by @AdamGLIN)
+
+- Client: Added "delete server" button to connect dialog (#3159).
+  (contributed by @pljones)
+
+- Client: Fixed the display of delete buttons on Mac (#3305).
+  (contributed by @softins)
+
+- Client/Server: Display Qt versions for both build and runtime (#3231).
+  (contributed by @softins)
+
+- Client/Server: Improved start up logging (#3117).
+  (contributed by @pljones)
+
+- Server: Fix systemd ExecStart command line to support start/stop recording signal (#3187).
+  (contributed by @rdica)
+
+- Server: Only de-register on quit (#3302).
+  (contributed by @pljones)
+
+- Mac: Changed bundle ID. You may need to re configure Jamulus to your liking after a new install (#3353).
+  (contributed by @ann0see)
+
+- Android: save settings on app state change (#3144).
+  (contributed by @pljones)
+
+- Refactor Release upload to two step process (#3374).
+  (contributed by @ann0see)
+
+- Refactoring: Decouple App Store upload from dmg build (#3350).
+  (contributed by @ann0see)
+
+- Refactor some `CHostAddress` parameters to be const references (#3259).
+  (contributed by @softins)
+
+- Refactor src/main.cpp (#3191).
+  (contributed by @pljones)
+
+- Translations updated from Hosted Weblate (#3193, #3246, #3284, #3325, #3363).
+  (contributed by @weblate)
+
+- Documentation: Improved link for Server CLI options (#3303).
+  (contributed by @gilgongo)
+
+- Documentation: updated TRANSLATING.md for current build process (#3312).
+  (contributed by @softins)
+
+- Build: adds macOS signed pkg build automation (#2624).
+  (contributed by @danryu)
+
+- Build: Bump actions/cache from 3 to 4 (#3232).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/checkout from 3 to 4 (#3168).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/download-artifact from 3 to 4 (#3211).
+  (contributed by @app/dependabot)
+
+- Build: Bump actions/upload-artifact from 3 to 4 (#3213).
+  (contributed by @app/dependabot)
+
+- Build: Bump DoozyX/clang-format-lint-action from 0.16 to 0.17 (#3215).
+  (contributed by @app/dependabot)
+
+- Build: Bump github/codeql-action from 2 to 3 (#3212).
+  (contributed by @app/dependabot)
+
+- Build: Bump maxim-lobanov/setup-xcode from 1.5.1 to 1.6.0 (#3181).
+  (contributed by @app/dependabot)
+
+- Build: checkout of submodules only needed for Android (#3289).
+  (contributed by @softins)
+
+- Build: Ensure apt version >=2.4 to prove that the system is Debian based (using apt and dpkg) and can validate the repo (#3199).
+  (contributed by @houbsta)
+
+- Build: Generate qm files and embedded resource during build (#3288).
+  (contributed by @softins)
+
+- Build: Place build files in separate directories instead of project root (#3299).
+  (contributed by @softins)
+
+- Build: Replace deprecated Q_OS_MACX with Q_OS_MACOS (Jamulus now requires building with Qt >= 5.7.1) (#3227).
+  (contributed by @softins)
+
+- Build: Updated bundled Qt6 to version 6.6.3 (#3182, #3204, #3236).
+  (contributed by @app/github-actions)
+
+- Build: Updated Mac Legacy build to use Qt 5.15.2, now compatible with MacOS 10.13 (High Sierra) or newer (#3235).
+  (contributed by @softins)
+
+- Build: Updated the build runner for iOS in Github from macos-11 to macos-12 (#3292).
+  (contributed by @softins)
+
+- Build: Updated Windows Installer base (NSIS) to version 3.10 (#3254).
+  (contributed by @app/github-actions)
+
+- Build: Upgrade main macOS build to macOS 14 and Apple Silicon build (#3297).
+  (contributed by @ann0see)
+
+- Autobuild: Build Linux releases on Ubuntu 20.04 instead of 18.04 (#3229).
+  (contributed by @softins)
+
+- Autobuild: Prevent CodeQL-induced build failures for MacOS (#3223).
+  (contributed by @softins)
+
+- Autobuild: Use notarytool instead of action for macOS notarization (#3352).
+  (contributed by @ann0see)
 
 
 ### 3.10.0 (2023-09-03) ###
@@ -1886,4 +2153,4 @@
 
 - initial version
 
-<!-- vim: syntax=Markdown -->
+<!-- vim: syntax=Markdown: set filetype=markdown: -->

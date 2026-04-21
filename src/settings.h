@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -64,14 +64,14 @@ public:
                 pGApp,
                 &QGuiApplication::saveStateRequest,
                 this,
-                [=] ( QSessionManager& ) { Save(); },
+                [=] ( QSessionManager& ) { Save ( false ); },
                 Qt::DirectConnection );
 
 #    endif
             QObject::connect ( pGApp, &QGuiApplication::applicationStateChanged, this, [=] ( Qt::ApplicationState state ) {
                 if ( Qt::ApplicationActive != state )
                 {
-                    Save();
+                    Save ( false );
                 }
             } );
         }
@@ -79,14 +79,14 @@ public:
     }
 
     void Load ( const QList<QString>& CommandLineOptions );
-    void Save();
+    void Save ( bool isAboutToQuit );
 
     // common settings
     QByteArray vecWindowPosMain;
     QString    strLanguage;
 
 protected:
-    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument )                                                  = 0;
+    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument, bool isAboutToQuit )                              = 0;
     virtual void ReadSettingsFromXML ( const QDomDocument& IniXMLDocument, const QList<QString>& CommandLineOptions ) = 0;
 
     void ReadFromFile ( const QString& strCurFileName, QDomDocument& XMLDocument );
@@ -131,7 +131,7 @@ protected:
     QString strFileName;
 
 public slots:
-    void OnAboutToQuit() { Save(); }
+    void OnAboutToQuit() { Save ( true ); }
 };
 
 #ifndef SERVER_ONLY
@@ -164,6 +164,24 @@ public:
         bWindowWasShownChat ( false ),
         bWindowWasShownConnect ( false ),
         bOwnFaderFirst ( false ),
+        iMidiChannel ( 0 ),
+        iMidiMuteMyself ( 0 ),
+        iMidiFaderOffset ( 0 ),
+        iMidiFaderCount ( 0 ),
+        iMidiPanOffset ( 0 ),
+        iMidiPanCount ( 0 ),
+        iMidiSoloOffset ( 0 ),
+        iMidiSoloCount ( 0 ),
+        iMidiMuteOffset ( 0 ),
+        iMidiMuteCount ( 0 ),
+        bMidiFaderEnabled ( false ),
+        bMidiPanEnabled ( false ),
+        bMidiSoloEnabled ( false ),
+        bMidiMuteEnabled ( false ),
+        bMidiMuteMyselfEnabled ( false ),
+        bUseMIDIController ( false ),
+        bMIDIPickupMode ( false ),
+        strMidiDevice ( "" ),
         pClient ( pNCliP )
     {
         SetFileName ( sNFiName, DEFAULT_INI_FILE_NAME );
@@ -171,6 +189,27 @@ public:
 
     void LoadFaderSettings ( const QString& strCurFileName );
     void SaveFaderSettings ( const QString& strCurFileName );
+
+    // Parse a --ctrlmidich MIDI mapping string and update MIDI variables
+    static void ParseCtrlMidiCh ( const QString& strMidiMap,
+                                  int&           iMidiChannel,
+                                  int&           iMidiFaderOffset,
+                                  int&           iMidiFaderCount,
+                                  int&           iMidiPanOffset,
+                                  int&           iMidiPanCount,
+                                  int&           iMidiSoloOffset,
+                                  int&           iMidiSoloCount,
+                                  int&           iMidiMuteOffset,
+                                  int&           iMidiMuteCount,
+                                  int&           iMidiMuteMyself,
+                                  bool&          bMidiFaderEnabled,
+                                  bool&          bMidiPanEnabled,
+                                  bool&          bMidiSoloEnabled,
+                                  bool&          bMidiMuteEnabled,
+                                  bool&          bMidiMuteMyselfEnabled,
+                                  bool&          bUseMIDIController,
+                                  bool&          bMIDIPickupMode,
+                                  QString*       strMIDIDevice = nullptr );
 
     // general settings
     CVector<QString> vecStoredFaderTags;
@@ -201,8 +240,28 @@ public:
     bool       bWindowWasShownConnect;
     bool       bOwnFaderFirst;
 
+    // MIDI settings
+    int     iMidiChannel;
+    int     iMidiMuteMyself;
+    int     iMidiFaderOffset;
+    int     iMidiFaderCount;
+    int     iMidiPanOffset;
+    int     iMidiPanCount;
+    int     iMidiSoloOffset;
+    int     iMidiSoloCount;
+    int     iMidiMuteOffset;
+    int     iMidiMuteCount;
+    bool    bMidiFaderEnabled;
+    bool    bMidiPanEnabled;
+    bool    bMidiSoloEnabled;
+    bool    bMidiMuteEnabled;
+    bool    bMidiMuteMyselfEnabled;
+    bool    bUseMIDIController;
+    bool    bMIDIPickupMode;
+    QString strMidiDevice;
+
 protected:
-    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument ) override;
+    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument, bool isAboutToQuit ) override;
     virtual void ReadSettingsFromXML ( const QDomDocument& IniXMLDocument, const QList<QString>& ) override;
 
     void ReadFaderSettingsFromXML ( const QDomDocument& IniXMLDocument );
@@ -221,7 +280,7 @@ public:
     }
 
 protected:
-    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument ) override;
+    virtual void WriteSettingsToXML ( QDomDocument& IniXMLDocument, bool isAboutToQuit ) override;
     virtual void ReadSettingsFromXML ( const QDomDocument& IniXMLDocument, const QList<QString>& CommandLineOptions ) override;
 
     CServer* pServer;

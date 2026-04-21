@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -23,18 +23,21 @@
 \******************************************************************************/
 
 #include "client.h"
+#include "settings.h"
+#include "util.h"
 
 /* Implementation *************************************************************/
 CClient::CClient ( const quint16  iPortNumber,
                    const quint16  iQosNumber,
                    const QString& strConnOnStartupAddress,
-                   const QString& strMIDISetup,
                    const bool     bNoAutoJackConnect,
                    const QString& strNClientName,
                    const bool     bNEnableIPv6,
                    const bool     bNMuteMeInPersonalMix ) :
     ChannelInfo(),
     strClientName ( strNClientName ),
+    pSignalHandler ( CSignalHandler::getSingletonP() ),
+    pSettings ( nullptr ),
     Channel ( false ), /* we need a client channel -> "false" */
     CurOpusEncoder ( nullptr ),
     CurOpusDecoder ( nullptr ),
@@ -48,7 +51,7 @@ CClient::CClient ( const quint16  iPortNumber,
     bMuteOutStream ( false ),
     fMuteOutStreamGain ( 1.0f ),
     Socket ( &Channel, iPortNumber, iQosNumber, "", bNEnableIPv6 ),
-    Sound ( AudioCallback, this, strMIDISetup, bNoAutoJackConnect, strNClientName ),
+    Sound ( AudioCallback, this, bNoAutoJackConnect, strNClientName ),
     iAudioInFader ( AUD_FADER_IN_MIDDLE ),
     bReverbOnLeftChan ( false ),
     iReverbLevel ( 0 ),
@@ -60,15 +63,14 @@ CClient::CClient ( const quint16  iPortNumber,
     bFraSiFactPrefSupported ( false ),
     bFraSiFactDefSupported ( false ),
     bFraSiFactSafeSupported ( false ),
-    eGUIDesign ( GD_ORIGINAL ),
+    eGUIDesign ( GD_DEFAULT ),
     eMeterStyle ( MT_LED_STRIPE ),
     bEnableAudioAlerts ( false ),
     bEnableOPUS64 ( false ),
     bJitterBufferOK ( true ),
     bEnableIPv6 ( bNEnableIPv6 ),
     bMuteMeInPersonalMix ( bNMuteMeInPersonalMix ),
-    iServerSockBufNumFrames ( DEF_NET_BUF_SIZE_NUM_BL ),
-    pSignalHandler ( CSignalHandler::getSingletonP() )
+    iServerSockBufNumFrames ( DEF_NET_BUF_SIZE_NUM_BL )
 {
     int iOpusError;
 
@@ -120,7 +122,6 @@ CClient::CClient ( const quint16  iPortNumber,
 
     // The first ConClientListMesReceived handler performs the necessary cleanup and has to run first:
     QObject::connect ( &Channel, &CChannel::ConClientListMesReceived, this, &CClient::OnConClientListMesReceived );
-    QObject::connect ( &Channel, &CChannel::ConClientListMesReceived, this, &CClient::ConClientListMesReceived );
 
     QObject::connect ( &Channel, &CChannel::Disconnected, this, &CClient::Disconnected );
 
@@ -130,7 +131,7 @@ CClient::CClient ( const quint16  iPortNumber,
 
     QObject::connect ( &Channel, &CChannel::ClientIDReceived, this, &CClient::OnClientIDReceived );
 
-    QObject::connect ( &Channel, &CChannel::MuteStateHasChangedReceived, this, &CClient::MuteStateHasChangedReceived );
+    QObject::connect ( &Channel, &CChannel::MuteStateHasChangedReceived, this, &CClient::OnMuteStateHasChangedReceived );
 
     QObject::connect ( &Channel, &CChannel::LicenceRequired, this, &CClient::LicenceRequired );
 
@@ -154,7 +155,7 @@ CClient::CClient ( const quint16  iPortNumber,
 
     QObject::connect ( &ConnLessProtocol, &CProtocol::CLVersionAndOSReceived, this, &CClient::CLVersionAndOSReceived );
 
-    QObject::connect ( &ConnLessProtocol, &CProtocol::CLChannelLevelListReceived, this, &CClient::CLChannelLevelListReceived );
+    QObject::connect ( &ConnLessProtocol, &CProtocol::CLChannelLevelListReceived, this, &CClient::OnCLChannelLevelListReceived );
 
     // other
     QObject::connect ( &Sound, &CSound::ReinitRequest, this, &CClient::OnSndCrdReinitRequest );
@@ -173,13 +174,15 @@ CClient::CClient ( const quint16  iPortNumber,
 
     QObject::connect ( pSignalHandler, &CSignalHandler::HandledSignal, this, &CClient::OnHandledSignal );
 
+    QObject::connect ( &Sound, &CSoundBase::MidiCCReceived, this, [this] ( int ccNumber ) { emit MidiCCReceived ( ccNumber ); } );
+
     // start timer so that elapsed time works
     PreciseTime.start();
 
     // set gain delay timer to single-shot and connect handler function
-    TimerGain.setSingleShot ( true );
+    TimerGainOrPan.setSingleShot ( true );
 
-    QObject::connect ( &TimerGain, &QTimer::timeout, this, &CClient::OnTimerRemoteChanGain );
+    QObject::connect ( &TimerGainOrPan, &QTimer::timeout, this, &CClient::OnTimerRemoteChanGainOrPan );
 
     // start the socket (it is important to start the socket after all
     // initializations and connections)
@@ -191,6 +194,29 @@ CClient::CClient ( const quint16  iPortNumber,
         SetServerAddr ( strConnOnStartupAddress );
         Start();
     }
+}
+
+// MIDI setup will be handled after settings are assigned
+void CClient::SetSettings ( CClientSettings* settings )
+{
+    pSettings = settings;
+
+    // Apply MIDI settings
+    Sound.SetCtrlMIDIChannel ( pSettings->iMidiChannel );
+    Sound.SetMIDIControllerMapping ( pSettings->iMidiFaderOffset,
+                                     pSettings->bMidiFaderEnabled ? pSettings->iMidiFaderCount : 0,
+                                     pSettings->iMidiPanOffset,
+                                     pSettings->bMidiPanEnabled ? pSettings->iMidiPanCount : 0,
+                                     pSettings->iMidiSoloOffset,
+                                     pSettings->bMidiSoloEnabled ? pSettings->iMidiSoloCount : 0,
+                                     pSettings->iMidiMuteOffset,
+                                     pSettings->bMidiMuteEnabled ? pSettings->iMidiMuteCount : 0,
+                                     pSettings->bMidiMuteMyselfEnabled ? pSettings->iMidiMuteMyself : -1 );
+    if ( !pSettings->strMidiDevice.isEmpty() )
+    {
+        Sound.SetMIDIDevice ( pSettings->strMidiDevice );
+    }
+    Sound.EnableMIDI ( pSettings->bUseMIDIController );
 }
 
 CClient::~CClient()
@@ -263,15 +289,6 @@ void CClient::OnJittBufSizeChanged ( int iNewJitBufSize )
 
 void CClient::OnNewConnection()
 {
-    // The oldGain and newGain arrays are used to avoid sending duplicate gain change messages.
-    // As these values depend on the channel IDs of a specific server, we have
-    // to reset those upon connect.
-    // We reset to 1 because this is what the server part sets by default.
-    for ( int iId = 0; iId < MAX_NUM_CHANNELS; iId++ )
-    {
-        oldGain[iId] = newGain[iId] = 1;
-    }
-
     // a new connection was successfully initiated, send infos and request
     // connected clients list
     Channel.SetRemoteInfo ( ChannelInfo );
@@ -291,31 +308,91 @@ void CClient::OnNewConnection()
     //### TODO: END ###//
 }
 
+void CClient::OnMuteStateHasChangedReceived ( int iServerChanID, bool bIsMuted )
+{
+    // map iChanID from server channel ID to client channel ID
+    int iChanID = FindClientChannel ( iServerChanID, false );
+
+    if ( iChanID != INVALID_INDEX )
+    {
+        emit MuteStateHasChangedReceived ( iChanID, bIsMuted );
+    }
+}
+
+void CClient::OnCLChannelLevelListReceived ( CHostAddress InetAddr, CVector<uint16_t> vecLevelList )
+{
+    // reorder levels from server channel order to client channel order
+
+    if ( ReorderLevelList ( vecLevelList ) )
+    {
+        emit CLChannelLevelListReceived ( InetAddr, vecLevelList );
+    }
+}
+
 void CClient::OnConClientListMesReceived ( CVector<CChannelInfo> vecChanInfo )
 {
-    // Upon receiving a new client list, we have to reset oldGain and newGain
-    // entries for unused channels. This ensures that a disconnected channel
-    // does not leave behind wrong cached gain values which would leak into
-    // any new channel which reused this channel id.
-    int iNumConnectedClients = vecChanInfo.Size();
+    // translate from server channel IDs to client channel IDs
+    // ALSO here is where we allocate and free client channels as required
 
-    // Save what channel IDs are in use:
-    bool bChanIdInUse[MAX_NUM_CHANNELS] = {};
-    for ( int i = 0; i < iNumConnectedClients; i++ )
-    {
-        bChanIdInUse[vecChanInfo[i].iChanID] = true;
-    }
+    const int iNumConnectedClients = vecChanInfo.Size();
+    int       i, iSrvIdx;
 
-    // Reset all gains for unused channel IDs:
-    for ( int iId = 0; iId < MAX_NUM_CHANNELS; iId++ )
+    // on a new connection, a server sends an empty channel list before sending
+    // the real channel list (see #1010). To avoid this discarding "our" channel
+    // that we have just created, we skip this processing and just pass the empty
+    // list to the emitted signal.
+
+    if ( iNumConnectedClients != 0 )
     {
-        if ( !bChanIdInUse[iId] )
+        // this relies on the received client list being in order of server channel ID
+
+        for ( i = 0, iSrvIdx = 0; i < iNumConnectedClients && iSrvIdx < MAX_NUM_CHANNELS; )
         {
-            // reset oldGain and newGain as this channel id is currently unused and will
-            // start with a server-side gain at 1 (100%) again.
-            oldGain[iId] = newGain[iId] = 1;
+            // server channel ID of this entry
+            const int iServerChannelID = vecChanInfo[i].iChanID;
+
+            // find matching client channel ID, creating new if necessary,
+            // update channel number to be client-side
+            vecChanInfo[i].iChanID = FindClientChannel ( iServerChannelID, true );
+
+            // discard any lower server channels that are no longer in our local list
+            while ( iSrvIdx < iServerChannelID )
+            {
+                const int iId = FindClientChannel ( iSrvIdx, false );
+
+                if ( iId != INVALID_INDEX )
+                {
+                    // iSrvIdx contains a server channel number that has now gone
+                    FreeClientChannel ( iSrvIdx );
+                }
+                iSrvIdx++;
+            }
+
+            i++;       // next list entry
+            iSrvIdx++; // next local server channel
         }
+
+        // have now run out of active channels, discard any remaining from our local list
+        // note that iActiveChannels will reduce as remaining channels are freed
+
+        while ( iActiveChannels > iNumConnectedClients && iSrvIdx < MAX_NUM_CHANNELS )
+        {
+            const int iId = FindClientChannel ( iSrvIdx, false );
+
+            if ( iId != INVALID_INDEX )
+            {
+                // iSrvIdx contains a server channel number that has now gone
+                FreeClientChannel ( iSrvIdx );
+            }
+            iSrvIdx++;
+        }
+
+        Q_ASSERT ( iActiveChannels == iNumConnectedClients );
     }
+
+    // pass the received list onwards, now containing client channel IDs
+
+    emit ConClientListMesReceived ( vecChanInfo );
 }
 
 void CClient::CreateServerJitterBufferMessage()
@@ -381,27 +458,30 @@ void CClient::SetDoAutoSockBufSize ( const bool bValue )
     CreateServerJitterBufferMessage();
 }
 
-// In order not to flood the server with gain change messages, particularly when using
+// In order not to flood the server with gain or pan change messages, particularly when using
 // a MIDI controller, a timer is used to limit the rate at which such messages are generated.
 // This avoids a potential long backlog of messages, since each must be ACKed before the next
 // can be sent, and this ACK is subject to the latency of the server connection.
 //
-// When the first gain change message is requested after an idle period (i.e. the timer is not
-// running), it will be sent immediately, and a 300ms timer started.
+// When the first gain or pan change message is requested after an idle period (i.e. the timer is not
+// running), it will be sent immediately, and a timer started. The timer period is dependent on
+// the current ping time to the remote server.
 //
-// If a gain change message is requested while the timer is still running, the new gain is not sent,
-// but just stored in newGain[iId], and the minGainId and maxGainId updated to note the range of
-// IDs that must be checked when the time expires (this will usually be a single channel
-// unless channel grouping is being used). This avoids having to check all possible channels.
+// If a gain or pan change message is requested while the timer is still running, the new value is not sent,
+// but just stored in newGain or newPan within clientChannels[iId], and the minGainOrPanId and maxGainOrPanId
+// updated to note the range of IDs that must be checked when the time expires (this will usually be a single
+// channel unless channel grouping is being used). This avoids having to check all possible channels.
 //
-// When the timer fires, the channels minGainId <= iId < maxGainId are checked by comparing
-// the last sent value in oldGain[iId] with any pending value in newGain[iId], and if they differ,
-// the new value is sent, updating oldGain[iId] with the sent value. If any new values are
-// sent, the timer is restarted so that further immediate updates will be pended.
+// When the timer fires, the channels minGainOrPanId <= iId < maxGainOrPanId are checked by comparing the
+// last sent values in oldGain or oldPan with any pending values in newGain or newPan, and if they differ,
+// the new value is sent, updating oldGain or oldPan with the sent value. If any new values are sent,
+// the timer is restarted so that further immediate updates will be pended.
 
 void CClient::SetRemoteChanGain ( const int iId, const float fGain, const bool bIsMyOwnFader )
 {
-    QMutexLocker locker ( &MutexGain );
+    QMutexLocker locker ( &MutexGainOrPan );
+
+    CClientChannel* clientChan = &clientChannels[iId];
 
     // if this gain is for my own channel, apply the value for the Mute Myself function
     if ( bIsMyOwnFader )
@@ -409,79 +489,114 @@ void CClient::SetRemoteChanGain ( const int iId, const float fGain, const bool b
         fMuteOutStreamGain = fGain;
     }
 
-    if ( TimerGain.isActive() )
+    if ( TimerGainOrPan.isActive() )
     {
         // just update the new value for sending later;
-        // will compare with oldGain[iId] when the timer fires
-        newGain[iId] = fGain;
+        // will compare with oldGain when the timer fires
+        clientChan->newGain = fGain;
 
         // update range of channel IDs to check in the timer
-        if ( iId < minGainId )
-            minGainId = iId; // first value to check
-        if ( iId >= maxGainId )
-            maxGainId = iId + 1; // first value NOT to check
+        if ( iId < minGainOrPanId )
+            minGainOrPanId = iId; // first value to check
+        if ( iId >= maxGainOrPanId )
+            maxGainOrPanId = iId + 1; // first value NOT to check
 
         return;
     }
 
     // here the timer was not active:
     // send the actual gain and reset the range of channel IDs to empty
-    oldGain[iId] = newGain[iId] = fGain;
-    Channel.SetRemoteChanGain ( iId, fGain );
+    clientChan->oldGain = clientChan->newGain = fGain;
+    Channel.SetRemoteChanGain ( clientChan->iServerChannelID, fGain ); // translate client channel to server channel ID
 
-    StartDelayTimer();
+    StartTimerGainOrPan();
 }
 
-void CClient::OnTimerRemoteChanGain()
+void CClient::OnTimerRemoteChanGainOrPan()
 {
-    QMutexLocker locker ( &MutexGain );
+    QMutexLocker locker ( &MutexGainOrPan );
     bool         bSent = false;
 
-    for ( int iId = minGainId; iId < maxGainId; iId++ )
+    for ( int iId = minGainOrPanId; iId < maxGainOrPanId; iId++ )
     {
-        if ( newGain[iId] != oldGain[iId] )
+        CClientChannel* clientChan = &clientChannels[iId];
+
+        if ( clientChan->newGain != clientChan->oldGain )
         {
             // send new gain and record as old gain
-            float fGain = oldGain[iId] = newGain[iId];
-            Channel.SetRemoteChanGain ( iId, fGain );
+            float fGain = clientChan->oldGain = clientChan->newGain;
+            Channel.SetRemoteChanGain ( clientChan->iServerChannelID, fGain ); // translate client channel to server channel ID
+            bSent = true;
+        }
+
+        if ( clientChan->newPan != clientChan->oldPan )
+        {
+            // send new pan and record as old pan
+            float fPan = clientChan->oldPan = clientChan->newPan;
+            Channel.SetRemoteChanPan ( clientChan->iServerChannelID, fPan ); // translate client channel to server channel ID
             bSent = true;
         }
     }
 
-    // if a new gain has been sent, reset the range of channel IDs to empty and start timer
+    // if a new gain or pan has been sent, reset the range of channel IDs to empty and start timer
     if ( bSent )
     {
-        StartDelayTimer();
+        StartTimerGainOrPan();
     }
 }
 
 // reset the range of channel IDs to check and start the delay timer
-void CClient::StartDelayTimer()
+void CClient::StartTimerGainOrPan()
 {
-    maxGainId = 0;
-    minGainId = MAX_NUM_CHANNELS;
+    maxGainOrPanId = 0;
+    minGainOrPanId = MAX_NUM_CHANNELS;
 
     // start timer to delay sending further updates
     // use longer delay when connected to server with higher ping time,
     // double the ping time in order to allow a bit of overhead for other messages
     if ( iCurPingTime < DEFAULT_GAIN_DELAY_PERIOD_MS / 2 )
     {
-        TimerGain.start ( DEFAULT_GAIN_DELAY_PERIOD_MS );
+        TimerGainOrPan.start ( DEFAULT_GAIN_DELAY_PERIOD_MS );
     }
     else
     {
-        TimerGain.start ( iCurPingTime * 2 );
+        TimerGainOrPan.start ( iCurPingTime * 2 );
     }
+}
+
+void CClient::SetRemoteChanPan ( const int iId, const float fPan )
+{
+    QMutexLocker locker ( &MutexGainOrPan );
+
+    CClientChannel* clientChan = &clientChannels[iId];
+
+    if ( TimerGainOrPan.isActive() )
+    {
+        // just update the new value for sending later;
+        // will compare with oldPan when the timer fires
+        clientChan->newPan = fPan;
+
+        // update range of channel IDs to check in the timer
+        if ( iId < minGainOrPanId )
+            minGainOrPanId = iId; // first value to check
+        if ( iId >= maxGainOrPanId )
+            maxGainOrPanId = iId + 1; // first value NOT to check
+
+        return;
+    }
+
+    // here the timer was not active:
+    // send the actual gain and reset the range of channel IDs to empty
+    clientChan->oldPan = clientChan->newPan = fPan;
+    Channel.SetRemoteChanPan ( clientChan->iServerChannelID, fPan ); // translate client channel to server channel ID
+
+    StartTimerGainOrPan();
 }
 
 bool CClient::SetServerAddr ( QString strNAddr )
 {
     CHostAddress HostAddress;
-#ifdef CLIENT_NO_SRV_CONNECT
-    if ( NetworkUtil().ParseNetworkAddress ( strNAddr, HostAddress, bEnableIPv6 ) )
-#else
-    if ( NetworkUtil().ParseNetworkAddressWithSrvDiscovery ( strNAddr, HostAddress, bEnableIPv6 ) )
-#endif
+    if ( NetworkUtil::ParseNetworkAddress ( strNAddr, HostAddress, bEnableIPv6 ) )
     {
         // apply address to the channel
         Channel.SetAddress ( HostAddress );
@@ -849,8 +964,20 @@ void CClient::OnControllerInMuteMyself ( bool bMute )
     emit ControllerInMuteMyself ( bMute );
 }
 
-void CClient::OnClientIDReceived ( int iChanID )
+void CClient::OnClientIDReceived ( int iServerChanID )
 {
+    // if we have just connected to a running server, iActiveChannels will be 0
+    // if iActiveChannels is not 0, the server must have been restarted on the fly
+    // in that case, channels might have changed, so clear our list to get it afresh.
+    if ( iActiveChannels != 0 )
+    {
+        qInfo() << "> Server restarted?";
+        ClearClientChannels();
+    }
+
+    // allocate and map client-side channel 0
+    int iChanID = FindClientChannel ( iServerChanID, true ); // should always return channel 0
+
     // for headless mode we support to mute our own signal in the personal mix
     // (note that the check for headless is done in the main.cpp and must not
     // be checked here)
@@ -867,11 +994,19 @@ void CClient::Start()
     // init object
     Init();
 
+    // initialise client channels
+    ClearClientChannels();
+
     // enable channel
     Channel.SetEnable ( true );
 
     // start audio interface
     Sound.Start();
+
+#if defined( Q_OS_WINDOWS )
+    // Disable hibernation or display dimming if the app is running on Windows
+    SetThreadExecutionState ( ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED );
+#endif
 }
 
 void CClient::Stop()
@@ -906,6 +1041,11 @@ void CClient::Stop()
     // reset current signal level and LEDs
     bJitterBufferOK = true;
     SignalLevelMeter.Reset();
+
+#if defined( Q_OS_WINDOWS )
+    // Allow hibernation or display dimming if the app is running again (Windows)
+    SetThreadExecutionState ( ES_CONTINUOUS );
+#endif
 }
 
 void CClient::Init()
@@ -1385,4 +1525,187 @@ int CClient::EstimatedOverallDelay ( const int iPingTimeMs )
         fDelayToFillNetworkPacketsMs + fTotalJitterBufferDelayMs + fTotalSoundCardDelayMs + fAdditionalAudioCodecDelayMs;
 
     return MathUtils::round ( fTotalBufferDelayMs + iPingTimeMs );
+}
+
+// Management of Client Channels and mapping to/from Server Channels
+
+void CClient::ClearClientChannels()
+{
+    QMutexLocker locker ( &MutexChannels );
+
+    iActiveChannels = 0;
+    iJoinSequence   = 0;
+
+    for ( int i = 0; i < MAX_NUM_CHANNELS; i++ )
+    {
+        clientChannels[i].iServerChannelID = INVALID_INDEX;
+        // all other fields will be initialised on channel allocation
+
+        clientChannelIDs[i] = INVALID_INDEX;
+    }
+
+    // qInfo() << "> Client channel list cleared";
+}
+
+void CClient::FreeClientChannel ( const int iServerChannelID )
+{
+    QMutexLocker locker ( &MutexChannels );
+
+    if ( iServerChannelID == INVALID_INDEX || iServerChannelID >= MAX_NUM_CHANNELS )
+    {
+        return;
+    }
+
+    const int iClientChannelID = clientChannelIDs[iServerChannelID];
+
+    Q_ASSERT ( clientChannels[iClientChannelID].iServerChannelID == iServerChannelID );
+
+    clientChannelIDs[iServerChannelID]                = INVALID_INDEX;
+    clientChannels[iClientChannelID].iServerChannelID = INVALID_INDEX;
+
+    iActiveChannels -= 1;
+
+    /*
+    qInfo() << qUtf8Printable ( QString ( "> Freed client ch %1 for server ch %2; chan count = %3" )
+                                    .arg ( iClientChannelID )
+                                    .arg ( iServerChannelID )
+                                    .arg ( iActiveChannels ) );
+     */
+}
+
+void CClient::OnMidiCCReceived ( int ccNumber ) { emit MidiCCReceived ( ccNumber ); }
+
+// find, and optionally create, a client channel for the supplied server channel ID
+// returns a client channel ID or INVALID_INDEX
+int CClient::FindClientChannel ( const int iServerChannelID, const bool bCreateIfNew )
+{
+    QMutexLocker locker ( &MutexChannels );
+
+    if ( iServerChannelID == INVALID_INDEX || iServerChannelID >= MAX_NUM_CHANNELS )
+    {
+        return INVALID_INDEX;
+    }
+
+    int iClientChannelID = clientChannelIDs[iServerChannelID];
+
+    if ( iClientChannelID != INVALID_INDEX )
+    {
+        Q_ASSERT ( clientChannels[iClientChannelID].iServerChannelID == iServerChannelID );
+
+        return iClientChannelID;
+    }
+
+    // no matching client channel - create new one if requested
+    if ( bCreateIfNew )
+    {
+        // search clientChannels[] for a free client channel
+        for ( iClientChannelID = 0; iClientChannelID < MAX_NUM_CHANNELS; iClientChannelID++ )
+        {
+            CClientChannel* clientChan = &clientChannels[iClientChannelID];
+
+            if ( clientChan->iServerChannelID == INVALID_INDEX )
+            {
+                clientChan->iServerChannelID = iServerChannelID;
+                clientChan->iJoinSequence    = ++iJoinSequence;
+
+                clientChan->oldGain = clientChan->newGain = 1.0f;
+                clientChan->oldPan = clientChan->newPan = 0.5f;
+
+                clientChan->level = 0;
+
+                clientChannelIDs[iServerChannelID] = iClientChannelID;
+
+                iActiveChannels += 1;
+
+                /*
+                qInfo() << qUtf8Printable ( QString ( "> Alloc client ch %1 for server ch %2; chan count = %3" )
+                                                .arg ( iClientChannelID )
+                                                .arg ( iServerChannelID )
+                                                .arg ( iActiveChannels ) );
+                 */
+
+                return iClientChannelID; // new client channel ID
+            }
+        }
+    }
+
+    return INVALID_INDEX;
+}
+
+// When the client receives a channel level list from the server, the list contains one value
+// for each currently-active channel, ordered by the channel ID assigned by the server.
+// The values will correspond to the active channels in the last client list that was sent.
+// This list is passed up to the mixer board, which will interpret the values in the order
+// of channels that it knows about.
+//
+// Since CClient is translating server channel IDs to local client channel IDs before
+// passing the client list up to the mixer board, it is also necessary to re-order the values
+// in the level list so that they are in order of mapped client channel ID.
+// This function performs that re-ordering by scanning the server channels in order, once,
+// for active channels, and storing the level value in the corresponding client channel.
+// Then the function scans the client channels in order, fetching the level values and putting
+// them back into vecLevelList in order of client channel. The mixer board will then display
+// the levels against the correct channels.
+//
+// The list size is checked against the current number of active channels to guard against
+// any unexpected temporary mismatch in size due to potential out-of-order message delivery.
+//
+// This function returns true if the list has been processed and should be passed on,
+// or false if it was the wrong size and should be discarded.
+
+bool CClient::ReorderLevelList ( CVector<uint16_t>& vecLevelList )
+{
+    QMutexLocker locker ( &MutexChannels );
+
+    // vecLevelList is sent from server ordered by server channel ID
+    // re-order it by client channel ID before passing up to the GUI
+    // the list is passed in by reference and modified in situ
+
+    // check it is the right length
+    if ( vecLevelList.Size() != iActiveChannels )
+    {
+        return false; // tell caller to ignore it
+    }
+
+    int iClientCh;
+    int iServerCh = 0;
+
+    // fetch levels by server channel ID
+
+    for ( int i = 0; i < iActiveChannels; i++ )
+    {
+        // find next active server channel
+        while ( iServerCh < MAX_NUM_CHANNELS )
+        {
+            iClientCh = clientChannelIDs[iServerCh++];
+
+            if ( iClientCh != INVALID_INDEX )
+            {
+                clientChannels[iClientCh].level = vecLevelList[i];
+                break;
+            }
+        }
+    }
+
+    // store levels by client channel ID
+
+    iClientCh = 0;
+
+    for ( int i = 0; i < iActiveChannels; i++ )
+    {
+        while ( iClientCh < MAX_NUM_CHANNELS )
+        {
+            uint16_t level = clientChannels[iClientCh].level;
+
+            iServerCh = clientChannels[iClientCh++].iServerChannelID;
+
+            if ( iServerCh != INVALID_INDEX )
+            {
+                vecLevelList[i] = level;
+                break;
+            }
+        }
+    }
+
+    return true; // tell caller to emit signal with new list
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -23,12 +23,12 @@
 \******************************************************************************/
 
 #include "clientdlg.h"
+#include "util.h"
 
 /* Implementation *************************************************************/
 CClientDlg::CClientDlg ( CClient*         pNCliP,
                          CClientSettings* pNSetP,
                          const QString&   strConnOnStartupAddress,
-                         const QString&   strMIDISetup,
                          const bool       bNewShowComplRegConnList,
                          const bool       bShowAnalyzerConsole,
                          const bool       bMuteStream,
@@ -41,10 +41,10 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     bDetectFeedback ( false ),
     bEnableIPv6 ( bNEnableIPv6 ),
     eLastRecorderState ( RS_UNDEFINED ), // for SetMixerBoardDeco
-    eLastDesign ( GD_ORIGINAL ),         //          "
+    eLastDesign ( GD_DEFAULT ),          //          "
     ClientSettingsDlg ( pNCliP, pNSetP, parent ),
     ChatDlg ( parent ),
-    ConnectDlg ( pNSetP, bNewShowComplRegConnList, parent ),
+    ConnectDlg ( pNSetP, bNewShowComplRegConnList, bNEnableIPv6, parent ),
     AnalyzerConsole ( pNCliP, parent )
 {
     setupUi ( this );
@@ -219,7 +219,7 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     MainMixerBoard->SetNumMixerPanelRows ( pSettings->iNumMixerPanelRows );
 
     // Pass through flag for MIDICtrlUsed
-    MainMixerBoard->SetMIDICtrlUsed ( !strMIDISetup.isEmpty() );
+    MainMixerBoard->SetMIDICtrlUsed ( pSettings->bUseMIDIController );
 
     // reset mixer board
     MainMixerBoard->HideAll();
@@ -333,6 +333,9 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     QAction* ByCityAction =
         pViewMenu->addAction ( tr ( "Sort Users by &City" ), this, SLOT ( OnSortChannelsByCity() ), QKeySequence ( Qt::CTRL + Qt::Key_T ) );
 
+    QAction* ByChannelAction =
+        pViewMenu->addAction ( tr ( "Sort Users by Chann&el" ), this, SLOT ( OnSortChannelsByChannel() ), QKeySequence ( Qt::CTRL + Qt::Key_E ) );
+
     OwnFaderFirstAction->setCheckable ( true );
     OwnFaderFirstAction->setChecked ( pSettings->bOwnFaderFirst );
 
@@ -349,13 +352,12 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     SortActionGroup->addAction ( ByGroupAction );
     ByCityAction->setCheckable ( true );
     SortActionGroup->addAction ( ByCityAction );
+    ByChannelAction->setCheckable ( true );
+    SortActionGroup->addAction ( ByChannelAction );
 
     // initialize sort type setting (i.e., recover stored setting)
     switch ( pSettings->eChannelSortType )
     {
-    case ST_NO_SORT:
-        NoSortAction->setChecked ( true );
-        break;
     case ST_BY_NAME:
         ByNameAction->setChecked ( true );
         break;
@@ -367,6 +369,12 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
         break;
     case ST_BY_CITY:
         ByCityAction->setChecked ( true );
+        break;
+    case ST_BY_SERVER_CHANNEL:
+        ByChannelAction->setChecked ( true );
+        break;
+    default: // ST_NO_SORT
+        NoSortAction->setChecked ( true );
         break;
     }
     MainMixerBoard->SetFaderSorting ( pSettings->eChannelSortType );
@@ -391,6 +399,12 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     pSettingsMenu->addAction ( tr ( "Audio/Network &Settings..." ), this, SLOT ( OnOpenAudioNetSettings() ), QKeySequence ( Qt::CTRL + Qt::Key_S ) );
 
     pSettingsMenu->addAction ( tr ( "A&dvanced Settings..." ), this, SLOT ( OnOpenAdvancedSettings() ), QKeySequence ( Qt::CTRL + Qt::Key_D ) );
+
+    pSettingsMenu->addAction (
+        tr ( "&MIDI Control Settings..." ),
+        this,
+        [this] { ShowGeneralSettings ( SETTING_TAB_MIDI ); },
+        QKeySequence ( Qt::CTRL + Qt::Key_M ) );
 
     // Main menu bar -----------------------------------------------------------
     QMenuBar* pMenu = new QMenuBar ( this );
@@ -527,6 +541,8 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
 
     QObject::connect ( &ClientSettingsDlg, &CClientSettingsDlg::NumMixerPanelRowsChanged, this, &CClientDlg::OnNumMixerPanelRowsChanged );
 
+    QObject::connect ( &ClientSettingsDlg, &CClientSettingsDlg::MIDIControllerUsageChanged, this, &CClientDlg::OnMIDIControllerUsageChanged );
+
     QObject::connect ( this, &CClientDlg::SendTabChange, &ClientSettingsDlg, &CClientSettingsDlg::OnMakeTabChange );
 
     QObject::connect ( MainMixerBoard, &CAudioMixerBoard::ChangeChanGain, this, &CClientDlg::OnChangeChanGain );
@@ -579,12 +595,14 @@ CClientDlg::CClientDlg ( CClient*         pNCliP,
     // Send the request to two servers for redundancy if either or both of them
     // has a higher release version number, the reply will trigger the notification.
 
-    if ( NetworkUtil().ParseNetworkAddress ( UPDATECHECK1_ADDRESS, UpdateServerHostAddress, bEnableIPv6 ) )
+    // Don't use SRV resolution when resolving update servers.
+
+    if ( NetworkUtil::ParseNetworkAddressBare ( UPDATECHECK1_ADDRESS, UpdateServerHostAddress, bEnableIPv6 ) )
     {
         pClient->CreateCLServerListReqVerAndOSMes ( UpdateServerHostAddress );
     }
 
-    if ( NetworkUtil().ParseNetworkAddress ( UPDATECHECK2_ADDRESS, UpdateServerHostAddress, bEnableIPv6 ) )
+    if ( NetworkUtil::ParseNetworkAddressBare ( UPDATECHECK2_ADDRESS, UpdateServerHostAddress, bEnableIPv6 ) )
     {
         pClient->CreateCLServerListReqVerAndOSMes ( UpdateServerHostAddress );
     }
@@ -805,8 +823,11 @@ void CClientDlg::OnVersionAndOSReceived ( COSUtil::EOpSystemType, QString strVer
 #endif
 }
 
-void CClientDlg::OnCLVersionAndOSReceived ( CHostAddress, COSUtil::EOpSystemType, QString strVersion )
+void CClientDlg::OnCLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType, QString strVersion )
 {
+    // display version in connect dialog
+    ConnectDlg.SetServerVersionResult ( InetAddr, strVersion );
+
     // update check
 #if ( QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 ) ) && !defined( DISABLE_VERSION_CHECK )
     int            mySuffixIndex;
@@ -1468,9 +1489,16 @@ void CClientDlg::SetMixerBoardDeco ( const ERecorderState newRecorderState, cons
         }
         else
         {
-            if ( palette().color ( QPalette::Window ) == QColor::fromRgbF ( 0.196078, 0.196078, 0.196078, 1 ) )
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 5, 0 )
+            // for Qt 6.5.0 or later, we use the inbuilt cross platform color scheme picker.
+            if ( QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark )
+#else
+            // for earlier versions, check darkmode as proposed in https://www.qt.io/blog/dark-mode-on-windows-11-with-qt-6.5
+            const QPalette defaultPalette;
+            if ( defaultPalette.color ( QPalette::WindowText ).lightness() > defaultPalette.color ( QPalette::Window ).lightness() )
+#endif
             {
-                // Dark mode on macOS/Linux needs a light color
+                // Dark mode needs a light color
 
                 sTitleStyle += "color: rgb(220,220,220); }";
             }
@@ -1504,4 +1532,14 @@ void CClientDlg::SetPingTime ( const int iPingTime, const int iOverallDelayMs, c
 
     // set current LED status
     ledDelay->SetLight ( eOverallDelayLEDColor );
+}
+
+// OnOpenMidiSettings slot removed; lambda is used in menu action
+void CClientDlg::OnMIDIControllerUsageChanged ( bool bEnabled )
+{
+    // Update the mixer board's MIDI flag to trigger proper user numbering display
+    MainMixerBoard->SetMIDICtrlUsed ( bEnabled );
+
+    // Enable/disable runtime MIDI via the sound interface through the public CClient interface
+    pClient->EnableMIDI ( bEnabled );
 }

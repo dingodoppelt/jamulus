@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2022-2024
+# Copyright (c) 2022-2026
 #
 # Author(s):
 #  Christian Hoffmann
@@ -26,10 +26,10 @@
 
 set -eu
 
-QT_DIR=/usr/local/opt/qt
+QT_DIR=~/qt
 # The following version pinnings are semi-automatically checked for
 # updates. Verify .github/workflows/bump-dependencies.yaml when changing those manually:
-AQTINSTALL_VERSION=3.1.12
+AQTINSTALL_VERSION=3.3.0
 
 TARGET_ARCHS="${TARGET_ARCHS:-}"
 
@@ -47,7 +47,15 @@ setup() {
         echo "Using Qt installation from previous run (actions/cache)"
     else
         echo "Installing Qt..."
-        python3 -m pip install "aqtinstall==${AQTINSTALL_VERSION}"
+        # We may need to create the Qt installation directory and chown it to the runner user to fix permissions
+        sudo mkdir -p "${QT_DIR}"
+        sudo chown "$(whoami)" "${QT_DIR}"
+        # Create and enter virtual environment
+        python3 -m venv venv
+        # Must hide directory as it just gets created during execution of the previous command and cannot be found by shellcheck
+        # shellcheck source=/dev/null
+        source venv/bin/activate
+        pip install "aqtinstall==${AQTINSTALL_VERSION}"
         local qtmultimedia=()
         if [[ ! "${QT_VERSION}" =~ 5\.[0-9]+\.[0-9]+ ]]; then
             # From Qt6 onwards, qtmultimedia is a module and cannot be installed
@@ -56,16 +64,25 @@ setup() {
         fi
         qtmultimedia+=("qtmultimedia")
         python3 -m aqt install-qt --outputdir "${QT_DIR}" mac desktop "${QT_VERSION}" --archives qtbase qttools qttranslations "${qtmultimedia[@]}"
+        # deactivate and remove venv as aqt is no longer needed from here on
+        deactivate
+        rm -rf venv
     fi
 }
 
 prepare_signing() {
+    ##  Certificate types in use:
+    # - MACOS_CERTIFICATE_DEV_ID_APPLICATION - Developer ID Application - for codesigning for adhoc release
+    # - MAC_STORE_APP_CERT - Mac App Distribution - codesigning for App Store submission
+    # - MACOS_CERTIFICATE_INST_DISTRIBUTION - Mac Installer Distribution - for signing installer pkg file for App Store submission
+
     [[ "${SIGN_IF_POSSIBLE:-0}" == "1" ]] || return 1
 
     # Signing was requested, now check all prerequisites:
-    [[ -n "${MACOS_CERTIFICATE:-}" ]] || return 1
-    [[ -n "${MACOS_CERTIFICATE_ID:-}" ]] || return 1
-    [[ -n "${MACOS_CERTIFICATE_PWD:-}" ]] || return 1
+    [[ -n "${MACOS_CERTIFICATE_DEV_ID_APPLICATION:-}" ]] || return 1
+    [[ -n "${MACOS_CERTIFICATE_DEV_ID_APPLICATION_ID:-}" ]] || return 1
+    [[ -n "${MACOS_CERTIFICATE_DEV_ID_APPLICATION_PWD:-}" ]] || return 1
+    [[ -n "${NOTARIZATION_PASSWORD:-}" ]] || return 1
     [[ -n "${KEYCHAIN_PASSWORD:-}" ]] || return 1
 
     # Check for notarization (not wanted on self signed build)
@@ -79,8 +96,8 @@ prepare_signing() {
 
     echo "Signing was requested and all dependencies are satisfied"
 
-    # Put the cert to a file
-    echo "${MACOS_CERTIFICATE}" | base64 --decode > certificate.p12
+    ## Put the certs to files
+    echo "${MACOS_CERTIFICATE_DEV_ID_APPLICATION}" | base64 --decode > macos_certificate.p12
 
     # If set, put the CA public key into a file
     if [[ -n "${MACOS_CA_PUBLICKEY}" ]]; then
@@ -93,8 +110,8 @@ prepare_signing() {
     # Remove default re-lock timeout to avoid codesign hangs:
     security set-keychain-settings build.keychain
     security unlock-keychain -p "${KEYCHAIN_PASSWORD}" build.keychain
-    security import certificate.p12 -k build.keychain -P "${MACOS_CERTIFICATE_PWD}" -T /usr/bin/codesign
-    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" build.keychain
+    security import macos_certificate.p12 -k build.keychain -P "${MACOS_CERTIFICATE_DEV_ID_APPLICATION_PWD}" -A -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" build.keychain
 
     # Tell Github Workflow that we want signing
     echo "macos_signed=true" >> "$GITHUB_OUTPUT"
@@ -114,6 +131,34 @@ prepare_signing() {
         echo "macos_notarize=true" >> "$GITHUB_OUTPUT"
     fi
 
+    # If distribution cert is present, set for store signing + submission
+    if [[ -n "${MAC_STORE_APP_CERT}" ]]; then
+
+        # Check all Github secrets are in place
+        # MAC_STORE_APP_CERT already checked
+        [[ -n "${MAC_STORE_APP_CERT_ID:-}" ]] || return 1
+        [[ -n "${MAC_STORE_APP_CERT_PWD:-}" ]] || return 1
+        [[ -n "${MACOS_CERTIFICATE_INST_DISTRIBUTION:-}" ]] || return 1
+        [[ -n "${MACOS_CERTIFICATE_INST_DISTRIBUTION_ID:-}" ]] || return 1
+        [[ -n "${MACOS_CERTIFICATE_INST_DISTRIBUTION_PWD:-}" ]] || return 1
+
+        # Put the certs to files
+        echo "${MAC_STORE_APP_CERT}" | base64 --decode > macapp_certificate.p12
+        echo "${MACOS_CERTIFICATE_INST_DISTRIBUTION}" | base64 --decode > macinst_certificate.p12
+
+        echo "App Store distribution dependencies are satisfied, proceeding..."
+
+        # Add additional certs to the keychain
+        security set-keychain-settings build.keychain
+        security unlock-keychain -p "${KEYCHAIN_PASSWORD}" build.keychain
+        security import macapp_certificate.p12 -k build.keychain -P "${MAC_STORE_APP_CERT_PWD}" -A -T /usr/bin/codesign
+        security import macinst_certificate.p12 -k build.keychain -P "${MACOS_CERTIFICATE_INST_DISTRIBUTION_PWD}" -A -T /usr/bin/productbuild
+        security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" build.keychain
+
+        # Tell Github Workflow that we are building for store submission
+        echo "macos_store=true" >> "$GITHUB_OUTPUT"
+    fi
+
     return 0
 }
 
@@ -125,7 +170,7 @@ build_app_as_dmg_installer() {
     # Mac's bash version considers BUILD_ARGS unset without at least one entry:
     BUILD_ARGS=("")
     if prepare_signing; then
-        BUILD_ARGS=("-s" "${MACOS_CERTIFICATE_ID}")
+        BUILD_ARGS=("-s" "${MACOS_CERTIFICATE_DEV_ID_APPLICATION_ID}" "-a" "${MAC_STORE_APP_CERT_ID}" "-i" "${MACOS_CERTIFICATE_INST_DISTRIBUTION_ID}" "-k" "${KEYCHAIN_PASSWORD}")
     fi
     TARGET_ARCHS="${TARGET_ARCHS}" ./mac/deploy_mac.sh "${BUILD_ARGS[@]}"
 }
@@ -135,6 +180,35 @@ pass_artifact_to_job() {
     echo "Moving build artifact to deploy/${artifact}"
     mv ./deploy/Jamulus-*installer-mac.dmg "./deploy/${artifact}"
     echo "artifact_1=${artifact}" >> "$GITHUB_OUTPUT"
+
+    artifact2="jamulus_${JAMULUS_BUILD_VERSION}_mac${ARTIFACT_SUFFIX:-}.pkg"
+    file=(./deploy/Jamulus_*.pkg)
+    if [ -f "${file[0]}" ]; then
+        echo "Moving build artifact2 to deploy/${artifact2}"
+        mv "${file[0]}" "./deploy/${artifact2}"
+        echo "artifact_2=${artifact2}" >> "$GITHUB_OUTPUT"
+    fi
+}
+
+notarize() {
+    echo "Submitting artifact to AppStore Connect..."
+
+    if [[ ${ARTIFACT_PATH} == *.pkg ]]; then
+        # Check if .pkg file is signed. (https://apple.stackexchange.com/a/212336)
+        pkgutil --check-signature "${ARTIFACT_PATH}"
+    fi
+
+    echo "Requesting notarization..."
+    xcrun notarytool submit "${ARTIFACT_PATH}" \
+        --apple-id "${NOTARIZATION_USERNAME}" \
+        --team-id "${APPLE_TEAM_ID}" \
+        --password "${NOTARIZATION_PASSWORD}" \
+        --wait
+}
+
+staple() {
+    echo "Stapling package..."
+    xcrun stapler staple "${ARTIFACT_PATH}"
 }
 
 case "${1:-}" in
@@ -146,6 +220,12 @@ case "${1:-}" in
         ;;
     get-artifacts)
         pass_artifact_to_job
+        ;;
+    notarize)
+        notarize
+        ;;
+    staple)
+        staple
         ;;
     *)
         echo "Unknown stage '${1:-}'"

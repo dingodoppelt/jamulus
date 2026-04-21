@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2022-2024
+# Copyright (c) 2022-2026
 #
 # Author(s):
 #  Christian Hoffmann
@@ -26,10 +26,10 @@
 
 set -eu
 
-QT_DIR=/usr/local/opt/qt
+QT_DIR=/opt/qt
 # The following version pinnings are semi-automatically checked for
 # updates. Verify .github/workflows/bump-dependencies.yaml when changing those manually:
-AQTINSTALL_VERSION=3.1.12
+AQTINSTALL_VERSION=3.3.0
 
 if [[ ! ${QT_VERSION:-} =~ [0-9]+\.[0-9]+\..* ]]; then
     echo "Environment variable QT_VERSION must be set to a valid Qt version"
@@ -45,9 +45,21 @@ setup() {
         echo "Using Qt installation from previous run (actions/cache)"
     else
         echo "Installing Qt"
-        python3 -m pip install "aqtinstall==${AQTINSTALL_VERSION}"
+        # We may need to create the Qt installation directory and chown it to the runner user to fix permissions
+        sudo mkdir -p "${QT_DIR}"
+        sudo chown "$(whoami)" "${QT_DIR}"
+        # Create and enter virtual environment
+        python3 -m venv venv
+        # Must hide directory as it just gets created during execution of the previous command and cannot be found by shellcheck
+        # shellcheck source=/dev/null
+        source venv/bin/activate
+        pip install "aqtinstall==${AQTINSTALL_VERSION}"
         # Install actual ios Qt:
         local qtmultimedia=()
+        # qtmultimedia requests camera and microphone permissions: https://doc.qt.io/qt-6.5/qtmultimedia-apple.html
+        # We do not need camera permissions, but AppStore Connect needs a description even if we never request for it.
+        # See the Info.plist file in the iOS build.
+
         if [[ ! "${QT_VERSION}" =~ 5\.[0-9]+\.[0-9]+ ]]; then
             # From Qt6 onwards, qtmultimedia is a module and cannot be installed
             # as an archive anymore.
@@ -58,9 +70,13 @@ setup() {
         if [[ ! "${QT_VERSION}" =~ 5\.[0-9]+\.[0-9]+  ]]; then
             # Starting with Qt6, ios' qtbase install does no longer include a real qmake binary.
             # Instead, it is a script which invokes the mac desktop qmake.
-            # As of aqtinstall 2.1.0 / 04/2022, desktop qtbase has to be installed manually:
-            python3 -m aqt install-qt --outputdir "${QT_DIR}" mac desktop "${QT_VERSION}" --archives qtbase
+            # As of aqtinstall 2.1.0 / 04/2022, desktop qtbase and qttools including lrelease have to be installed manually:
+            python3 -m aqt install-qt --outputdir "${QT_DIR}" mac desktop "${QT_VERSION}" --archives qtbase qttools
         fi
+
+        # deactivate and remove venv as aqt is no longer needed from here on
+        deactivate
+        rm -rf venv
     fi
 }
 
