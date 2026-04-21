@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -167,211 +167,6 @@ uint32_t CCRC::GetCRC()
 
     // remove bit which where shifted out of the shift-register frame
     return iStateShiftReg & ( iBitOutMask - 1 );
-}
-
-/******************************************************************************\
-* Audio Reverberation                                                          *
-\******************************************************************************/
-/*
-    The following code is based on "JCRev: John Chowning's reverberator class"
-    by Perry R. Cook and Gary P. Scavone, 1995 - 2004
-    which is in "The Synthesis ToolKit in C++ (STK)"
-    http://ccrma.stanford.edu/software/stk
-
-    Original description:
-    This class is derived from the CLM JCRev function, which is based on the use
-    of networks of simple allpass and comb delay filters. This class implements
-    three series allpass units, followed by four parallel comb filters, and two
-    decorrelation delay lines in parallel at the output.
-*/
-void CAudioReverb::Init ( const EAudChanConf eNAudioChannelConf, const int iNStereoBlockSizeSam, const int iSampleRate, const float fT60 )
-{
-    // store parameters
-    eAudioChannelConf   = eNAudioChannelConf;
-    iStereoBlockSizeSam = iNStereoBlockSizeSam;
-
-    // delay lengths for 44100 Hz sample rate
-    int         lengths[9] = { 1116, 1356, 1422, 1617, 225, 341, 441, 211, 179 };
-    const float scaler     = static_cast<float> ( iSampleRate ) / 44100.0f;
-
-    if ( scaler != 1.0f )
-    {
-        for ( int i = 0; i < 9; i++ )
-        {
-            int delay = static_cast<int> ( floorf ( scaler * lengths[i] ) );
-
-            if ( ( delay & 1 ) == 0 )
-            {
-                delay++;
-            }
-
-            while ( !isPrime ( delay ) )
-            {
-                delay += 2;
-            }
-
-            lengths[i] = delay;
-        }
-    }
-
-    for ( int i = 0; i < 3; i++ )
-    {
-        allpassDelays[i].Init ( lengths[i + 4] );
-    }
-
-    for ( int i = 0; i < 4; i++ )
-    {
-        combDelays[i].Init ( lengths[i] );
-        combFilters[i].setPole ( 0.2f );
-    }
-
-    setT60 ( fT60, iSampleRate );
-    outLeftDelay.Init ( lengths[7] );
-    outRightDelay.Init ( lengths[8] );
-    allpassCoefficient = 0.7f;
-    Clear();
-}
-
-bool CAudioReverb::isPrime ( const int number )
-{
-    /*
-        Returns true if argument value is prime. Taken from "class Effect" in
-        "STK abstract effects parent class".
-    */
-    if ( number == 2 )
-    {
-        return true;
-    }
-
-    if ( number & 1 )
-    {
-        for ( int i = 3; i < static_cast<int> ( sqrtf ( static_cast<float> ( number ) ) ) + 1; i += 2 )
-        {
-            if ( ( number % i ) == 0 )
-            {
-                return false;
-            }
-        }
-
-        return true; // prime
-    }
-    else
-    {
-        return false; // even
-    }
-}
-
-void CAudioReverb::Clear()
-{
-    // reset and clear all internal state
-    allpassDelays[0].Reset ( 0 );
-    allpassDelays[1].Reset ( 0 );
-    allpassDelays[2].Reset ( 0 );
-    combDelays[0].Reset ( 0 );
-    combDelays[1].Reset ( 0 );
-    combDelays[2].Reset ( 0 );
-    combDelays[3].Reset ( 0 );
-    combFilters[0].Reset();
-    combFilters[1].Reset();
-    combFilters[2].Reset();
-    combFilters[3].Reset();
-    outRightDelay.Reset ( 0 );
-    outLeftDelay.Reset ( 0 );
-}
-
-void CAudioReverb::setT60 ( const float fT60, const int iSampleRate )
-{
-    // set the reverberation T60 decay time
-    for ( int i = 0; i < 4; i++ )
-    {
-        combCoefficient[i] = powf ( 10.0f, static_cast<float> ( -3.0f * combDelays[i].Size() / ( fT60 * iSampleRate ) ) );
-    }
-}
-
-void CAudioReverb::COnePole::setPole ( const float fPole )
-{
-    // calculate IIR filter coefficients based on the pole value
-    fA = -fPole;
-    fB = 1.0f - fPole;
-}
-
-float CAudioReverb::COnePole::Calc ( const float fIn )
-{
-    // calculate IIR filter
-    fLastSample = fB * fIn - fA * fLastSample;
-
-    return fLastSample;
-}
-
-void CAudioReverb::Process ( CVector<int16_t>& vecsStereoInOut, const bool bReverbOnLeftChan, const float fAttenuation )
-{
-    float fMixedInput, temp, temp0, temp1, temp2;
-
-    for ( int i = 0; i < iStereoBlockSizeSam; i += 2 )
-    {
-        // we sum up the stereo input channels (in case mono input is used, a zero
-        // shall be input for the right channel)
-        if ( eAudioChannelConf == CC_STEREO )
-        {
-            fMixedInput = 0.5f * ( vecsStereoInOut[i] + vecsStereoInOut[i + 1] );
-        }
-        else
-        {
-            if ( bReverbOnLeftChan )
-            {
-                fMixedInput = vecsStereoInOut[i];
-            }
-            else
-            {
-                fMixedInput = vecsStereoInOut[i + 1];
-            }
-        }
-
-        temp  = allpassDelays[0].Get();
-        temp0 = allpassCoefficient * temp;
-        temp0 += fMixedInput;
-        allpassDelays[0].Add ( temp0 );
-        temp0 = -( allpassCoefficient * temp0 ) + temp;
-
-        temp  = allpassDelays[1].Get();
-        temp1 = allpassCoefficient * temp;
-        temp1 += temp0;
-        allpassDelays[1].Add ( temp1 );
-        temp1 = -( allpassCoefficient * temp1 ) + temp;
-
-        temp  = allpassDelays[2].Get();
-        temp2 = allpassCoefficient * temp;
-        temp2 += temp1;
-        allpassDelays[2].Add ( temp2 );
-        temp2 = -( allpassCoefficient * temp2 ) + temp;
-
-        const float temp3 = temp2 + combFilters[0].Calc ( combCoefficient[0] * combDelays[0].Get() );
-        const float temp4 = temp2 + combFilters[1].Calc ( combCoefficient[1] * combDelays[1].Get() );
-        const float temp5 = temp2 + combFilters[2].Calc ( combCoefficient[2] * combDelays[2].Get() );
-        const float temp6 = temp2 + combFilters[3].Calc ( combCoefficient[3] * combDelays[3].Get() );
-
-        combDelays[0].Add ( temp3 );
-        combDelays[1].Add ( temp4 );
-        combDelays[2].Add ( temp5 );
-        combDelays[3].Add ( temp6 );
-
-        const float filtout = temp3 + temp4 + temp5 + temp6;
-
-        outLeftDelay.Add ( filtout );
-        outRightDelay.Add ( filtout );
-
-        // inplace apply the attenuated reverb signal (for stereo always apply
-        // reverberation effect on both channels)
-        if ( ( eAudioChannelConf == CC_STEREO ) || bReverbOnLeftChan )
-        {
-            vecsStereoInOut[i] = Float2Short ( ( 1.0f - fAttenuation ) * vecsStereoInOut[i] + 0.5f * fAttenuation * outLeftDelay.Get() );
-        }
-
-        if ( ( eAudioChannelConf == CC_STEREO ) || !bReverbOnLeftChan )
-        {
-            vecsStereoInOut[i + 1] = Float2Short ( ( 1.0f - fAttenuation ) * vecsStereoInOut[i + 1] + 0.5f * fAttenuation * outRightDelay.Get() );
-        }
-    }
 }
 
 // CHighPrecisionTimer implementation ******************************************
@@ -764,13 +559,25 @@ CAboutDlg::CAboutDlg ( QWidget* parent ) : CBaseDlg ( parent )
                               "<p>Gary Wang (<a href=\"https://github.com/BLumia\">BLumia</a>)</p>" +
                               "<p><b>" + tr ( "Norwegian Bokmål" ) +
                               "</b></p>"
-                              "<p>Allan Nordhøy (<a href=\"https://hosted.weblate.org/user/kingu/\">kingu</a>)</p>" );
+                              "<p>Allan Nordhøy (<a href=\"https://hosted.weblate.org/user/kingu/\">kingu</a>)</p>" +
+                              "<p><b>" + tr ( "Japanese" ) +
+                              "</b></p>"
+                              "<p>tsukurun (<a href=\"https://github.com/tsukurun\">tsukurun</a>)</p>" );
 
     // set version number in about dialog
     lblVersion->setText ( GetVersionAndNameStr() );
 
     // set window title
     setWindowTitle ( tr ( "About %1" ).arg ( APP_NAME ) );
+
+    //### TODO: BEGIN ###//
+    // Test if the window also needs to be maximized on Android.
+    // Android has not been tested
+#    if defined( ANDROID ) || defined( Q_OS_IOS )
+    // for mobile version maximize the window
+    setWindowState ( Qt::WindowMaximized );
+#    endif
+    //### TODO: END ###//
 }
 
 // Licence dialog --------------------------------------------------------------
@@ -829,16 +636,25 @@ CHelpMenu::CHelpMenu ( const bool bIsClient, QWidget* parent ) : QMenu ( tr ( "&
     addSeparator();
     addAction ( tr ( "What's &This" ), this, SLOT ( OnHelpWhatsThis() ), QKeySequence ( Qt::SHIFT + Qt::Key_F1 ) );
     addSeparator();
+
+    addAction ( tr ( "P&rivacy policy..." ), this, SLOT ( OnHelpPrivacyPolicy() ) );
+
     pAction = addAction ( tr ( "&About Jamulus..." ), this, SLOT ( OnHelpAbout() ) );
     pAction->setMenuRole ( QAction::AboutRole ); // required for Mac
     pAction = addAction ( tr ( "About &Qt..." ), this, SLOT ( OnHelpAboutQt() ) );
+
     pAction->setMenuRole ( QAction::AboutQtRole ); // required for Mac
 }
 
 // Language combo box ----------------------------------------------------------
 CLanguageComboBox::CLanguageComboBox ( QWidget* parent ) : QComboBox ( parent ), iIdxSelectedLanguage ( INVALID_INDEX )
 {
-    QObject::connect ( this, static_cast<void ( QComboBox::* ) ( int )> ( &QComboBox::activated ), this, &CLanguageComboBox::OnLanguageActivated );
+    // This requires a Qt::QueuedConnection on iOS due to https://bugreports.qt.io/browse/QTBUG-64577
+    QObject::connect ( this,
+                       static_cast<void ( QComboBox::* ) ( int )> ( &QComboBox::activated ),
+                       this,
+                       &CLanguageComboBox::OnLanguageActivated,
+                       Qt::QueuedConnection );
 }
 
 void CLanguageComboBox::Init ( QString& strSelLanguage )
@@ -934,7 +750,7 @@ bool NetworkUtil::ParseNetworkAddressString ( QString strAddress, QHostAddress& 
     return false;
 }
 
-#ifndef CLIENT_NO_SRV_CONNECT
+#ifndef DISABLE_SRV_DNS
 bool NetworkUtil::ParseNetworkAddressSrv ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 )
 {
     // init requested host address with invalid address first
@@ -990,20 +806,22 @@ bool NetworkUtil::ParseNetworkAddressSrv ( QString strAddress, CHostAddress& Hos
     }
     return false;
 }
+#endif
 
-bool NetworkUtil::ParseNetworkAddressWithSrvDiscovery ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 )
+bool NetworkUtil::ParseNetworkAddress ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 )
 {
+#ifndef DISABLE_SRV_DNS
     // Try SRV-based discovery first:
     if ( ParseNetworkAddressSrv ( strAddress, HostAddress, bEnableIPv6 ) )
     {
         return true;
     }
-    // Try regular connect via plain IP or host name lookup (A/AAAA):
-    return ParseNetworkAddress ( strAddress, HostAddress, bEnableIPv6 );
-}
 #endif
+    // Try regular connect via plain IP or host name lookup (A/AAAA):
+    return ParseNetworkAddressBare ( strAddress, HostAddress, bEnableIPv6 );
+}
 
-bool NetworkUtil::ParseNetworkAddress ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 )
+bool NetworkUtil::ParseNetworkAddressBare ( QString strAddress, CHostAddress& HostAddress, bool bEnableIPv6 )
 {
     QHostAddress InetAddr;
     unsigned int iNetPort = DEFAULT_PORT_NUMBER;
@@ -1762,7 +1580,7 @@ QString GetVersionAndNameStr ( const bool bDisplayInGui )
         strVersionText += "\n *** ";
 #    endif
 #endif
-        strVersionText += "\n *** Copyright © 2005-2024 The Jamulus Development Team";
+        strVersionText += "\n *** Copyright © 2005-2026 The Jamulus Development Team";
         strVersionText += "\n";
     }
 

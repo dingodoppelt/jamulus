@@ -164,8 +164,10 @@ Results:
 | result.name | string | The musician’s name. |
 | result.skillLevel | string | The musician’s skill level (beginner, intermediate, expert, or null). |
 | result.countryId | number | The musician’s country ID (see QLocale::Country). |
+| result.country | string | The musician’s country. |
 | result.city | string | The musician’s city. |
 | result.instrumentId | number | The musician’s instrument ID (see CInstPictures::GetTable). |
+| result.instrument | string | The musician’s instrument. |
 | result.skillLevel | string | Your skill level (beginner, intermediate, expert, or null). |
 
 
@@ -203,6 +205,57 @@ Results:
 | result.clients | array | The client list. See jamulusclient/clientListReceived for the format. |
 
 
+### jamulusclient/getMidiDevices
+
+Returns a list of available MIDI input devices.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | array | Array of MIDI device name strings. |
+
+
+### jamulusclient/getMidiSettings
+
+Returns all MIDI controller settings.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | object | MIDI settings object. |
+
+
+### jamulusclient/pollServerList
+
+Request list of servers in a directory.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.directory | string | Socket address of directory to query. Example: anygenre1.jamulus.io:22124 |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | "ok" or "error" if bad arguments. |
+
+
 ### jamulusclient/sendChatText
 
 Sends a chat text message.
@@ -220,6 +273,44 @@ Results:
 | result | string | Always "ok". |
 
 
+<<<<<<< HEAD
+=======
+### jamulusclient/setFaderLevel
+
+Sets the fader level. Example: {"id":1,"jsonrpc":"2.0","method":"jamulusclient/setFaderLevel","params":{"channelIndex": 0,"level":  50}}.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.channelIndex | number | The channel index of the fader to be set. |
+| params.level | number | The fader level in range 0..100. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+### jamulusclient/setMidiSettings
+
+Sets one or more MIDI controller settings.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | Any subset of MIDI settings fields to set. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+>>>>>>> release-dev
 ### jamulusclient/setMuted
 
 Mutes or unmutes the client.
@@ -380,6 +471,8 @@ Results:
 | result.city | string | The server city. |
 | result.countryId | number | The server country ID (see QLocale::Country). |
 | result.welcomeMessage | string | The server welcome message. |
+| result.directoryType | string | The directory type as a string (see EDirectoryType and SerializeDirectoryType). |
+| result.directoryAddress | string | The string used to look up the directory address (only assume valid if directoryType is "custom"  and registrationStatus is "registered"). |
 | result.directory | string | The directory with which this server requested registration, or blank if none. |
 | result.registrationStatus | string | The server registration status as string (see ESvrRegStatus and SerializeRegistrationStatus). |
 
@@ -418,6 +511,24 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "acknowledged".   To check if the recording was restarted or if there is any error, call `jamulusserver/getRecorderStatus` again. |
+
+
+### jamulusserver/setDirectory
+
+Set the directory type and, for custom, the directory address.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.directoryType | string | The directory type as a string (see EDirectoryType and DeserializeDirectoryType). |
+| [params.directoryAddress] | string | (optional) The directory address, required if `directoryType` is "custom". |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
 
 
 ### jamulusserver/setRecordingDirectory
@@ -610,8 +721,10 @@ Parameters:
 | params.clients[*].name | string | The musician’s name. |
 | params.clients[*].skillLevel | string | The musician’s skill level (beginner, intermediate, expert, or null). |
 | params.clients[*].countryId | number | The musician’s country ID (see QLocale::Country). |
+| params.clients[*].country | string | The musician’s country. |
 | params.clients[*].city | string | The musician’s city. |
 | params.clients[*].instrumentId | number | The musician’s instrument ID (see CInstPictures::GetTable). |
+| params.clients[*].instrument | string | The musician’s instrument. |
 
 
 ### jamulusclient/connected
@@ -636,6 +749,49 @@ Parameters:
 | params | object | No parameters (empty object). |
 
 
+<<<<<<< HEAD
+=======
+### jamulusclient/recorderState
+
+Emitted when the client is connected to a server whose recorder state changes.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.state | number | The recorder state. |
+
+
+### jamulusclient/serverInfoReceived
+
+Emitted when a server info is received.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.address | string | The server socket address. |
+| params.pingtime | number | The round-trip ping time, in milliseconds. |
+| params.numClients | number | The number of clients connected to the server. |
+
+
+### jamulusclient/serverListReceived
+
+Emitted when the server list is received.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.servers | array | The server list. |
+| params.servers[*].address | string | Socket address (ip_address:port). |
+| params.servers[*].name | string | Server name. |
+| params.servers[*].countryId | number | Server country ID (see QLocale::Country). |
+| params.servers[*].country | string | Server country. |
+| params.servers[*].city | string | Server city. |
+
+
+>>>>>>> release-dev
 ### jamulusserver/chatMessageReceived
 
 Emitted when a chat message is received.

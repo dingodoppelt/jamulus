@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -44,6 +44,19 @@
 #define SERV_LIST_REQ_UPDATE_TIME_MS 2000 // ms
 
 /* Classes ********************************************************************/
+
+// Subclass of QTreeWidgetItem that allows LVC_VERSION to sort by the UserRole data value
+class CMappedTreeWidgetItem : public QTreeWidgetItem
+{
+public:
+    explicit CMappedTreeWidgetItem ( QTreeWidget* owner = nullptr );
+
+    bool operator<( const QTreeWidgetItem& other ) const override;
+
+private:
+    QTreeWidget* owner = nullptr;
+};
+
 class CConnectDlg : public CBaseDlg, private Ui_CConnectDlgBase
 {
     Q_OBJECT
@@ -59,23 +72,38 @@ public:
     void SetConnClientsList ( const CHostAddress& InetAddr, const CVector<CChannelInfo>& vecChanInfo );
 
     void SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr, const int iPingTime, const int iNumClients );
+    void SetServerVersionResult ( const CHostAddress& InetAddr, const QString& strVersion );
 
     bool    GetServerListItemWasChosen() const { return bServerListItemWasChosen; }
     QString GetSelectedAddress() const { return strSelectedAddress; }
     QString GetSelectedServerName() const { return strSelectedServerName; }
 
+    // NOTE: This enum must list the columns in the same order
+    //       as their column headings in connectdlgbase.ui
+    enum EConnectListViewColumns
+    {
+        LVC_NAME,               // server name
+        LVC_PING,               // ping time
+        LVC_CLIENTS,            // number of connected clients (including additional strings like " (full)")
+        LVC_LOCATION,           // location
+        LVC_VERSION,            // server version
+        LVC_PING_MIN_HIDDEN,    // minimum ping time (invisible)
+        LVC_CLIENTS_MAX_HIDDEN, // maximum number of clients (invisible)
+        LVC_COLUMNS             // total number of columns
+    };
+
 protected:
     virtual void showEvent ( QShowEvent* );
     virtual void hideEvent ( QHideEvent* );
 
-    QTreeWidgetItem* FindListViewItem ( const CHostAddress& InetAddr );
-    QTreeWidgetItem* GetParentListViewItem ( QTreeWidgetItem* pItem );
-    void             DeleteAllListViewItemChilds ( QTreeWidgetItem* pItem );
-    void             UpdateListFilter();
-    void             ShowAllMusicians ( const bool bState );
-    void             RequestServerList();
-    void             EmitCLServerListPingMes ( const CHostAddress& haServerAddress );
-    void             UpdateDirectoryComboBox();
+    CMappedTreeWidgetItem* FindListViewItem ( const CHostAddress& InetAddr );
+    CMappedTreeWidgetItem* GetParentListViewItem ( QTreeWidgetItem* pItem );
+    void                   DeleteAllListViewItemChilds ( QTreeWidgetItem* pItem );
+    void                   UpdateListFilter();
+    void                   ShowAllMusicians ( const bool bState );
+    void                   RequestServerList();
+    void                   EmitCLServerListPingMes ( const CHostAddress& haServerAddress, const bool bNeedVersion );
+    void                   UpdateDirectoryComboBox();
 
     CClientSettings* pSettings;
 
@@ -104,6 +132,7 @@ public slots:
     void OnDeleteServerAddrClicked();
     void OnTimerPing();
     void OnTimerReRequestServList();
+    void OnCurrentServerItemChanged ( QTreeWidgetItem* current, QTreeWidgetItem* previous );
 
 signals:
     void ReqServerListQuery ( CHostAddress InetAddr );

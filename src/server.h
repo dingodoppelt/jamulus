@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -99,6 +99,7 @@ public:
               const QString&     strServerPublicIP,
               const QString&     strNewWelcomeMessage,
               const QString&     strRecordingDirName,
+              const QString&     strStreamDest,
               const bool         bNDisconnectAllClientsOnQuit,
               const bool         bNUseDoubleSystemFrameSize,
               const bool         bNUseMultithreading,
@@ -180,6 +181,7 @@ public:
                                CVector<QString>&      vecsSkill,
                                CVector<int>&          veciJitBufNumFrames,
                                CVector<int>&          veciNetwFrameSizeFact );
+
 #ifndef _WIN32
     streamer::CJamStreamer* pJamStreamer;
 #endif
@@ -307,6 +309,9 @@ protected:
     recorder::CJamController JamController;
     bool                     bDisableRecording;
 
+    // jam streamer
+    bool bStream = false;
+
     // GUI settings
     bool bAutoRunMinimized;
 
@@ -341,6 +346,8 @@ signals:
     void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     // pass through from jam controller
     void RestartRecorder();

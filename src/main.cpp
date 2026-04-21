@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -102,7 +102,6 @@ int main ( int argc, char** argv )
     QString      strJsonRpcBindIP            = DEFAULT_JSON_RPC_LISTEN_ADDRESS;
     quint16      iQosNumber                  = DEFAULT_QOS_NUMBER;
     ELicenceType eLicenceType                = LT_NO_LICENCE;
-    QString      strMIDISetup                = "";
     QString      strConnOnStartupAddress     = "";
     QString      strIniFileName              = "";
     QString      strHTMLStatusFileName       = "";
@@ -110,6 +109,7 @@ int main ( int argc, char** argv )
     QString      strRecordingDirName         = "";
     QString      strDirectoryAddress         = "";
     QString      strServerListFileName       = "";
+    QString      strStreamDest               = "";
     QString      strServerInfo               = "";
     QString      strServerPublicIP           = "";
     QString      strServerBindIP             = "";
@@ -222,8 +222,12 @@ int main ( int argc, char** argv )
         // Quality of Service --------------------------------------------------
         if ( GetNumericArgument ( argc, argv, i, "-Q", "--qos", 0, 255, rDbleArgument ) )
         {
+#if defined( Q_OS_WIN )
+            qWarning() << "QoS is currently not available under Windows - ignoring";
+#else
             iQosNumber = static_cast<quint16> ( rDbleArgument );
             qInfo() << qUtf8Printable ( QString ( "- selected QoS value: %1" ).arg ( iQosNumber ) );
+#endif
             CommandLineOptions << "--qos";
             continue;
         }
@@ -342,6 +346,9 @@ int main ( int argc, char** argv )
         // HTML status file ----------------------------------------------------
         if ( GetStringArgument ( argc, argv, i, "-m", "--htmlstatus", strArgument ) )
         {
+            qWarning() << qUtf8Printable (
+                QString ( "- The HTML status file option (\"--htmlstatus\" or \"-m\") is deprecated and will be removed soon. Please use JSON-RPC "
+                          "instead.  See https://github.com/jamulussoftware/jamulus/blob/main/docs/JSON-RPC.md" ) );
             strHTMLStatusFileName = strArgument;
             qInfo() << qUtf8Printable ( QString ( "- HTML status file name: %1" ).arg ( strHTMLStatusFileName ) );
             CommandLineOptions << "--htmlstatus";
@@ -532,7 +539,7 @@ int main ( int argc, char** argv )
             continue;
         }
 
-        // Controller MIDI channel ---------------------------------------------
+        // MIDI
         if ( GetStringArgument ( argc,
                                  argv,
                                  i,
@@ -540,9 +547,7 @@ int main ( int argc, char** argv )
                                  "--ctrlmidich",
                                  strArgument ) )
         {
-            strMIDISetup = strArgument;
-            qInfo() << qUtf8Printable ( QString ( "- MIDI controller settings: %1" ).arg ( strMIDISetup ) );
-            CommandLineOptions << "--ctrlmidich";
+            CommandLineOptions << QString ( "--ctrlmidich=%1" ).arg ( strArgument );
             ClientOnlyOptions << "--ctrlmidich";
             continue;
         }
@@ -577,6 +582,21 @@ int main ( int argc, char** argv )
             qInfo() << "- show analyzer console";
             CommandLineOptions << "--showanalyzerconsole";
             ClientOnlyOptions << "--showanalyzerconsole";
+            continue;
+        }
+
+        // Stream destination ---------------------------------------------------------
+        if ( GetStringArgument ( argc,
+                                 argv,
+                                 i,
+                                 "--streamto", // no short form
+                                 "--streamto",
+                                 strArgument ) )
+        {
+            strStreamDest = strArgument;
+            qInfo() << qUtf8Printable( QString( "- stream destination: %1" )
+                .arg( strStreamDest ) );
+            CommandLineOptions << "--streamto";
             continue;
         }
 
@@ -917,25 +937,17 @@ int main ( int argc, char** argv )
 #ifndef SERVER_ONLY
         if ( bIsClient )
         {
-            // Client:
-            // actual client object
-            CClient Client ( iPortNumber,
-                             iQosNumber,
-                             strConnOnStartupAddress,
-                             strMIDISetup,
-                             bNoAutoJackConnect,
-                             strClientName,
-                             bEnableIPv6,
-                             bMuteMeInPersonalMix );
+            CClient Client ( iPortNumber, iQosNumber, strConnOnStartupAddress, bNoAutoJackConnect, strClientName, bEnableIPv6, bMuteMeInPersonalMix );
 
-            // load settings from init-file (command line options override)
+            // Create Settings with the client pointer
             CClientSettings Settings ( &Client, strIniFileName );
             Settings.Load ( CommandLineOptions );
+            Client.SetSettings ( &Settings );
 
 #    ifndef NO_JSON_RPC
             if ( pRpcServer )
             {
-                new CClientRpc ( &Client, pRpcServer, pRpcServer );
+                new CClientRpc ( &Client, &Settings, pRpcServer, pRpcServer );
             }
 #    endif
 
@@ -953,7 +965,6 @@ int main ( int argc, char** argv )
                 CClientDlg ClientDlg ( &Client,
                                        &Settings,
                                        strConnOnStartupAddress,
-                                       strMIDISetup,
                                        bShowComplRegConnList,
                                        bShowAnalyzerConsole,
                                        bMuteStream,
@@ -992,6 +1003,7 @@ int main ( int argc, char** argv )
                              strServerListFilter,
                              strWelcomeMessage,
                              strRecordingDirName,
+                             strStreamDest,
                              bDisconnectAllClientsOnQuit,
                              bUseDoubleSystemFrameSize,
                              bUseMultithreading,
@@ -1111,7 +1123,7 @@ QString UsageArguments ( char** argv )
            "  -F, --fastupdate        use 64 samples frame size mode\n"
            "  -l, --log               enable logging, set file name\n"
            "  -L, --licence           show an agreement window before users can connect\n"
-           "  -m, --htmlstatus        enable HTML status file, set file name\n"
+           "  -m, --htmlstatus        deprecated, please use JSON-RPC instead\n"
            "  -o, --serverinfo        registration info for this Server.  Format:\n"
            "                          [name];[city];[country as two-letter ISO country code or Qt5 QLocale ID]\n"
            "      --serverpublicip    public IP address for this Server.  Needed when\n"

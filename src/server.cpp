@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -38,6 +38,7 @@ CServer::CServer ( const int          iNewMaxNumChan,
                    const QString&     strServerPublicIP,
                    const QString&     strNewWelcomeMessage,
                    const QString&     strRecordingDirName,
+                   const QString&     strStreamDest,
                    const bool         bNDisconnectAllClientsOnQuit,
                    const bool         bNUseDoubleSystemFrameSize,
                    const bool         bNUseMultithreading,
