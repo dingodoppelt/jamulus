@@ -1,6 +1,7 @@
 [Unit]
 Description=Jamulus headless server
-After=network.target
+After=network-online.target
+Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
@@ -13,6 +14,7 @@ ProtectHome=true
 Nice=-20
 IOSchedulingClass=realtime
 IOSchedulingPriority=0
+MemorySwapMax=0
 
 #### Change this to publish this server, set genre, location and other parameters.
 #### See https://jamulus.io/wiki/Running-a-Server#server-mode-related-options ####

@@ -1,5 +1,5 @@
 /******************************************************************************\
- * Copyright (c) 2004-2024
+ * Copyright (c) 2004-2026
  *
  * Author(s):
  *  Volker Fischer
@@ -29,6 +29,7 @@
 #include "../../util.h"
 #include "../../global.h"
 #include "../soundbase.h"
+#include "../midi-win/midi.h"
 
 // The following includes require the ASIO SDK to be placed in
 // libs/ASIOSDK2 during build.
@@ -54,9 +55,9 @@ class CSound : public CSoundBase
     Q_OBJECT
 
 public:
-    CSound ( void ( *fpNewCallback ) ( CVector<int16_t>& psData, void* arg ), void* arg, const QString& strMIDISetup, const bool, const QString& );
+    CSound ( void ( *fpNewCallback ) ( CVector<int16_t>& psData, void* arg ), void* arg, const bool, const QString& );
 
-    virtual ~CSound() { UnloadCurrentDriver(); }
+    virtual ~CSound();
 
     virtual int  Init ( const int iNewPrefMonoBufferSize );
     virtual void Start();
@@ -80,6 +81,11 @@ public:
     virtual int     GetRightOutputChannel() { return vSelectedOutputChannels[1]; }
 
     virtual float GetInOutLatencyMs() { return fInOutLatencyMs; }
+
+    // MIDI port toggle
+    virtual void        EnableMIDI ( bool bEnable );
+    virtual bool        IsMIDIEnabled() const;
+    virtual QStringList GetMIDIDevNames();
 
 protected:
     virtual QString LoadAndInitializeDriver ( QString strDriverName, bool bOpenDriverSetup );
@@ -134,4 +140,10 @@ protected:
     static long      asioMessages ( long selector, long value, void* message, double* opt );
 
     char* cDriverNames[MAX_NUMBER_SOUND_CARDS];
+
+    // Windows native MIDI support
+    CMidi Midi;
+
+private:
+    bool bMidiEnabled = false; // Tracks the runtime state of MIDI
 };
