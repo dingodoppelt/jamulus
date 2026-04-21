@@ -43,6 +43,7 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "streamer/jamstreamer.h"
 
 #include "threadpool.h"
 
@@ -98,6 +99,7 @@ public:
               const QString&     strServerPublicIP,
               const QString&     strNewWelcomeMessage,
               const QString&     strRecordingDirName,
+              const QString&     strStreamDest,
               const bool         bNDisconnectAllClientsOnQuit,
               const bool         bNUseDoubleSystemFrameSize,
               const bool         bNUseMultithreading,
@@ -204,6 +206,8 @@ protected:
 
     void MixEncodeTransmitData ( const int iChanCnt, const int iNumClients );
 
+    void MixStream ( const int iNumClients );
+
     virtual void customEvent ( QEvent* pEvent );
 
     void CreateAndSendRecorderStateForAllConChannels();
@@ -290,6 +294,9 @@ protected:
     recorder::CJamController JamController;
     bool                     bDisableRecording;
 
+    // jam streamer
+    bool bStream = false;
+
     // GUI settings
     bool bAutoRunMinimized;
 
@@ -320,6 +327,8 @@ signals:
                       const CVector<int16_t> vecsData );
 
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     // pass through from jam controller
     void RestartRecorder();
