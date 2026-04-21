@@ -273,8 +273,6 @@ Results:
 | result | string | Always "ok". |
 
 
-<<<<<<< HEAD
-=======
 ### jamulusclient/setFaderLevel
 
 Sets the fader level. Example: {"id":1,"jsonrpc":"2.0","method":"jamulusclient/setFaderLevel","params":{"channelIndex": 0,"level":  50}}.
@@ -310,7 +308,6 @@ Results:
 | result | string | Always "ok". |
 
 
->>>>>>> release-dev
 ### jamulusclient/setMuted
 
 Mutes or unmutes the client.
@@ -749,8 +746,6 @@ Parameters:
 | params | object | No parameters (empty object). |
 
 
-<<<<<<< HEAD
-=======
 ### jamulusclient/recorderState
 
 Emitted when the client is connected to a server whose recorder state changes.
@@ -791,7 +786,6 @@ Parameters:
 | params.servers[*].city | string | Server city. |
 
 
->>>>>>> release-dev
 ### jamulusserver/chatMessageReceived
 
 Emitted when a chat message is received.
