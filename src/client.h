@@ -305,6 +305,7 @@ public:
     // settings
     CChannelCoreInfo ChannelInfo;
     QString          strClientName;
+    void OnRPCInMuteMyself ( bool bMute ) { OnControllerInMuteMyself ( bMute ); }
 
 public:
     void SetSettings ( CClientSettings* settings );

@@ -95,6 +95,23 @@ Results:
 | result | string | "ok" on success |
 
 
+### jamulus/getAvailableMethods
+
+Returns all available rpc methods.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.methods | array | All available methods. |
+
+
 ### jamulus/getMode
 
 Returns the current mode, i.e. whether Jamulus is running as a server or client.
@@ -291,6 +308,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusclient/setMuted
+
+Mutes or unmutes the client.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.muted | boolean | muted (true or false). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusclient/setName
 
 Sets your name.
@@ -323,6 +357,50 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "ok". |
+
+
+### jamulusserver/broadcastChatMessage
+
+Sends a chat message to all connected clients.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.chatMessage | string | The chat message text. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+### jamulusserver/getClientDetails
+
+Returns the list of connected clients along with complete details about them.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.clients | array | The list of connected clients. |
+| result.clients[*].id | number | The client’s channel id. |
+| result.clients[*].address | string | The client’s address (ip:port). |
+| result.clients[*].name | string | The client’s name. |
+| result.clients[*].city | string | The client’s city. |
+| result.clients[*].country | string | The client’s country. |
+| result.clients[*].instr | string | The client’s instrument. |
+| result.clients[*].instrpic | string | The client’s instrument picture. |
+| result.clients[*].skill | string | The client’s skill. |
+| result.clients[*].jitterBufferSize | number | The client’s jitter buffer size. |
+| result.clients[*].channels | number | The number of audio channels of the client. |
 
 
 ### jamulusserver/getClients
@@ -619,5 +697,40 @@ Parameters:
 | params.servers[*].countryId | number | Server country ID (see QLocale::Country). |
 | params.servers[*].country | string | Server country. |
 | params.servers[*].city | string | Server city. |
+
+
+### jamulusserver/chatMessageReceived
+
+Emitted when a chat message is received.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.chatMessage | string | Chat message text. |
+
+
+### jamulusserver/clientConnected
+
+Emitted when a client has connected to the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.id | number | The channel ID assigned to the client. |
+| params.address | string | The client's address. |
+| params.totalChannels | number | Number of total channels connected to the server. |
+
+
+### jamulusserver/clientDisconnected
+
+Emitted when a client has disconnected from the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.id | number | The channel ID assigned to the client. |
 
 
