@@ -271,7 +271,6 @@
 - Autobuild: Use notarytool instead of action for macOS notarization (#3352).
   (contributed by @ann0see)
 
-
 ### 3.10.0 (2023-09-03) ###
 
 - Build: Mac: Keep the signing-related keychain unlocked (#2927).

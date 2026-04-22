@@ -899,6 +899,7 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
     if ( pCurListViewItem )
     {
         // check if this is the first time a ping time is set
+
         const bool bIsFirstPing = pCurListViewItem->text ( LVC_PING ).isEmpty();
 
         // update minimum ping time column (invisible, used for sorting) if

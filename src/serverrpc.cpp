@@ -84,6 +84,65 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
         response["result"] = "ok";
     } );
 
+#ifndef _WIN32
+    /// @rpc_method jamulusserver/startStream
+    /// @brief Starts the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/startStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->startStream();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/stopStream
+    /// @brief Stops the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/stopStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->OnStopped();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/toggleStream
+    /// @brief Toggles the stream to autostart (or not) when a client joins the server.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/toggleStream", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->toggleActive();
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/setStreamDestination
+    /// @brief Sets the stream destination.
+    /// @param {string} params.strStreamDestination - Stream destination to ffmpeg.
+    /// @result {string} result - Always "ok".
+    pRpcServer->HandleMethod ( "jamulusserver/setStreamDestination", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        pServer->pJamStreamer->Init ( params["strStreamDestination"].toString() );
+        response["result"] = "ok";
+        Q_UNUSED ( params );
+    } );
+
+    /// @rpc_method jamulusserver/getStreamStatus
+    /// @brief Returns info about the stream.
+    /// @param {object} params - No parameters (empty object).
+    /// @result {boolean} result.streamStatus - streaming status.
+    /// @result {boolean} result.streamEnabled - stream enabled status.
+    /// @result {string} result.streamDestination - address of the streaming server.
+    pRpcServer->HandleMethod ( "jamulusserver/getStreamStatus", [=] ( const QJsonObject& params, QJsonObject& response ) {
+        QJsonObject result{
+            { "streamStatus", pServer->pJamStreamer->getStreamStatus() },
+            { "streamEnabled", pServer->pJamStreamer->getStreamEnabled() },
+            { "streamDestination", pServer->pJamStreamer->getStreamDestination() },
+        };
+
+        response["result"] = result;
+        Q_UNUSED ( params );
+    } );
+#endif
+
     /// @rpc_method jamulusserver/getRecorderStatus
     /// @brief Returns the recorder state.
     /// @param {object} params - No parameters (empty object).

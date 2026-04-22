@@ -182,6 +182,10 @@ public:
                                CVector<int>&          veciJitBufNumFrames,
                                CVector<int>&          veciNetwFrameSizeFact );
 
+#ifndef _WIN32
+    streamer::CJamStreamer* pJamStreamer;
+#endif
+
 protected:
     // access functions for actual channels
     bool IsConnected ( const int iChanNum ) { return vecChannels[iChanNum].IsConnected(); }
@@ -339,9 +343,9 @@ signals:
                       const int              iNumAudChan,
                       const CVector<int16_t> vecsData );
 
-    void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
-
     void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
+
+    void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
 
     // pass through from jam controller
     void RestartRecorder();

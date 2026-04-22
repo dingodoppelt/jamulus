@@ -219,20 +219,15 @@ CServer::CServer ( const int          iNewMaxNumChan,
     // that jam recorder needs the frame size which is given to the jam
     // recorder in the SetRecordingDir() function)
     SetRecordingDir ( strRecordingDirName );
-#ifndef _WIN32    
+#ifndef _WIN32
     // enable jam streaming
-    if ( !strStreamDest.isEmpty() )
-    {
-        bStream = true;
-        QThread* pthJamStreamer = new QThread;
-        streamer::CJamStreamer* pJamStreamer = new streamer::CJamStreamer();
-        pJamStreamer->Init( strStreamDest );
-        pJamStreamer->moveToThread(pthJamStreamer);
-        QObject::connect( this, &CServer::Started, pJamStreamer, &streamer::CJamStreamer::OnStarted );
-        QObject::connect( this, &CServer::Stopped, pJamStreamer, &streamer::CJamStreamer::OnStopped );
-        QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
-        pthJamStreamer->start();
-    }
+    QThread* pthJamStreamer = new QThread;
+    pJamStreamer = new streamer::CJamStreamer();
+    pJamStreamer->moveToThread(pthJamStreamer);
+    QObject::connect( this, &CServer::Started, pJamStreamer, &streamer::CJamStreamer::OnStarted );
+    QObject::connect( this, &CServer::Stopped, pJamStreamer, &streamer::CJamStreamer::OnStopped );
+    QObject::connect( this, &CServer::StreamFrame, pJamStreamer, &streamer::CJamStreamer::process );
+    pthJamStreamer->start();
 #endif
     // enable all channels (for the server all channel must be enabled the
     // entire life time of the software)
@@ -672,11 +667,10 @@ void CServer::OnTimer()
         const bool bSendChannelLevels = CreateLevelsForAllConChannels ( iNumClients, vecNumAudioChannels, vecvecsData, vecChannelLevels );
 
 #ifndef _WIN32
-        if ( bStream == true ) {
+        if ( pJamStreamer->bInitialized() ) {
             MixStream ( iNumClients );
         }
 #endif
-
         for ( int iChanCnt = 0; iChanCnt < iNumClients; iChanCnt++ )
         {
             // get actual ID of current channel
@@ -1266,8 +1260,6 @@ void CServer::MixStream ( const int iNumClients )
                         // left/right channel
                         vecfIntermProcBuf[k]     += vecsData[i];
                         vecfIntermProcBuf[k + 1] += vecsData[i];
-                        vecsSendData[k] = Float2Short ( vecfIntermProcBuf[k] );
-                        vecsSendData[k + 1] = Float2Short ( vecfIntermProcBuf[k + 1] );
                     }
                 }
                 else
@@ -1276,10 +1268,13 @@ void CServer::MixStream ( const int iNumClients )
                     for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
                     {
                         vecfIntermProcBuf[i] += vecsData[i];
-                        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
-                        vecsSendData[i + 1] = Float2Short ( vecfIntermProcBuf[i + 1] );
                     }
                 }
+    }
+
+    for (i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
+    {
+        vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
     }
 
     emit StreamFrame ( iServerFrameSizeSamples, vecsSendData );
