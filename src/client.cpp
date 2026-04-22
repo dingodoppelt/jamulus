@@ -400,6 +400,11 @@ void CClient::OnConClientListMesReceived ( CVector<CChannelInfo> vecChanInfo )
 void CClient::OnVersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString strVersion )
 {
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 )
+    const bool bWasRunning = Sound.IsRunning();
+    if ( bWasRunning )
+    {
+        Sound.Stop();
+    }
     if ( QVersionNumber::compare ( QVersionNumber::fromString ( strVersion ), QVersionNumber ( 3, 11, 1 ) ) == 0 )
     {
         bRawAudioIsSupported = true;
@@ -409,6 +414,10 @@ void CClient::OnVersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString s
     {
         bRawAudioIsSupported = false;
         Init();
+    }
+    if ( bWasRunning )
+    {
+        Sound.Start();
     }
 #endif
 }
@@ -1179,7 +1188,7 @@ void CClient::Init()
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY_DBLE_FRAMESIZE;
                 break;
             case AQ_RAW:
-                if ( bRawAudioIsSupported )
+                if ( bRawAudioIsSupported && Channel.IsEnabled() )
                 {
                     iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
                 }
@@ -1208,7 +1217,7 @@ void CClient::Init()
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY_DBLE_FRAMESIZE;
                 break;
             case AQ_RAW:
-                if ( bRawAudioIsSupported )
+                if ( bRawAudioIsSupported && Channel.IsEnabled() )
                 {
                     iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
                 }
@@ -1242,7 +1251,7 @@ void CClient::Init()
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_MONO_HIGH_QUALITY;
                 break;
             case AQ_RAW:
-                if ( bRawAudioIsSupported )
+                if ( bRawAudioIsSupported && Channel.IsEnabled() )
                 {
                     iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
                 }
@@ -1271,7 +1280,7 @@ void CClient::Init()
                 iCeltNumCodedBytes = OPUS_NUM_BYTES_STEREO_HIGH_QUALITY;
                 break;
             case AQ_RAW:
-                if ( bRawAudioIsSupported )
+                if ( bRawAudioIsSupported && Channel.IsEnabled() )
                 {
                     iCeltNumCodedBytes = iNumAudioChannels * iOPUSFrameSizeSamples * sizeof ( int16_t );
                 }
