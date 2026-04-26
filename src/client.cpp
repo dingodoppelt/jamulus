@@ -1477,22 +1477,21 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
                     iUnused = opus_custom_encode ( CurOpusEncoder, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples, &vecCeltData[0], iCeltNumCodedBytes );
                 }
             }
-            // send coded audio through the network
-            Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
         }
         else
         {
-            if ( !bMuteOutStream )
+            if ( bMuteOutStream )
+            {
+                memset ( &vecCeltData[0], 0, iCeltNumCodedBytes );
+            }
+            else
             {
                 // Send raw samples instead of OPUS
                 memcpy ( &vecCeltData[0], &vecsStereoSndCrd[j], iCeltNumCodedBytes );
             }
-            else
-            {
-                memset ( &vecCeltData[0], 0, iCeltNumCodedBytes );
-            }
-            Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
         }
+        // send coded audio through the network
+        Channel.PrepAndSendPacket ( &Socket, vecCeltData, iCeltNumCodedBytes );
     }
 
     // Receive signal ----------------------------------------------------------
@@ -1527,24 +1526,17 @@ void CClient::ProcessAudioDataIntern ( CVector<int16_t>& vecsStereoSndCrd )
             if ( eAudioQuality == AQ_RAW && bRawAudioIsSupported )
             {
                 memset ( &vecsStereoSndCrd[j], 0, iCeltNumCodedBytes );
-                pCurCodedData = nullptr;
             }
-            else
-            {
-                // for lost packets use null pointer as coded input data
-                pCurCodedData = nullptr;
-            }
+            // for lost packets use null pointer as coded input data
+            pCurCodedData = nullptr;
             // invalidate the buffer OK status flag
             bJitterBufferOK = false;
         }
 
-        if ( eAudioQuality != AQ_RAW || !bRawAudioIsSupported )
+        if ( ( eAudioQuality != AQ_RAW || !bRawAudioIsSupported ) && CurOpusDecoder != nullptr )
         {
             // OPUS decoding
-            if ( CurOpusDecoder != nullptr )
-            {
-                iUnused = opus_custom_decode ( CurOpusDecoder, pCurCodedData, iCeltNumCodedBytes, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples );
-            }
+            iUnused = opus_custom_decode ( CurOpusDecoder, pCurCodedData, iCeltNumCodedBytes, &vecsStereoSndCrd[j], iOPUSFrameSizeSamples );
         }
     }
 

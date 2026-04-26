@@ -905,6 +905,7 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
                 if ( bIsRawAudio )
                 {
                     memcpy ( &vecvecsData[iChanCnt][iOffset], &vecvecbyCodedData[iChanCnt][0], iCeltNumCodedBytes );
+                    pCurCodedData = nullptr;
                 }
                 else
                 {
@@ -917,25 +918,17 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
                 {
                     memset ( &vecvecsData[iChanCnt][iOffset], 0, iCeltNumCodedBytes );
                 }
-                else
-                {
-                    // for lost packets use null pointer as coded input data
-                    pCurCodedData = nullptr;
-                }
+                // for lost packets use null pointer as coded input data
+                pCurCodedData = nullptr;
             }
 
-            if ( !bIsRawAudio )
+            if ( !bIsRawAudio && CurOpusDecoder != nullptr )
             {
-                // OPUS decode received data stream
-                if ( CurOpusDecoder != nullptr )
-                {
-
-                    iUnused = opus_custom_decode ( CurOpusDecoder,
-                                                   pCurCodedData,
-                                                   iCeltNumCodedBytes,
-                                                   &vecvecsData[iChanCnt][iOffset],
-                                                   iClientFrameSizeSamples );
-                }
+                iUnused = opus_custom_decode ( CurOpusDecoder,
+                                               pCurCodedData,
+                                               iCeltNumCodedBytes,
+                                               &vecvecsData[iChanCnt][iOffset],
+                                               iClientFrameSizeSamples );
             }
         }
 
@@ -1216,9 +1209,6 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                                                    iClientFrameSizeSamples,
                                                    &vecvecbyCodedData[iChanCnt][0],
                                                    iCeltNumCodedBytes );
-
-                    // send separate mix to current clients
-                    vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
                 }
             }
         }
@@ -1229,10 +1219,10 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
 
                 memcpy ( &vecvecbyCodedData[iChanCnt][0], &vecsSendData[iOffset], iCeltNumCodedBytes );
-
-                vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
             }
         }
+        // send separate mix to current clients
+        vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
     }
 
     Q_UNUSED ( iUnused )
