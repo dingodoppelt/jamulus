@@ -405,7 +405,6 @@ protected:
     EMeterStyle eMeterStyle;
     bool        bEnableAudioAlerts;
     bool        bEnableOPUS64;
-    bool        bRawAudioIsSupported;
 
     bool   bJitterBufferOK;
     bool   bEnableIPv6;
@@ -413,7 +412,8 @@ protected:
     QMutex MutexDriverReinit;
 
     // server settings
-    int iServerSockBufNumFrames;
+    int  iServerSockBufNumFrames;
+    bool bRawAudioIsSupported;
 
     // for ping measurement
     QElapsedTimer PreciseTime;
