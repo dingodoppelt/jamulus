@@ -903,7 +903,8 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
             // iNumAudioChannels is either 1 for mono or 2 for stereo and mono-in/stereo-out
             // sizeof ( int16_t ) is the size in bytes for the raw pcm audio data = 2
             // Sizes other than that are considered OPUS coded because those depend on hardcoded sizes in client.h
-            const bool bIsRawAudio = ( iCeltNumCodedBytes == static_cast<int> ( iClientFrameSizeSamples * vecNumAudioChannels[iChanCnt] * sizeof ( int16_t ) ) );
+            const bool bIsRawAudio =
+                ( iCeltNumCodedBytes == static_cast<int> ( iClientFrameSizeSamples * vecNumAudioChannels[iChanCnt] * sizeof ( int16_t ) ) );
 
             // get pointer to coded data
             if ( eGetStat == GS_BUFFER_OK )
@@ -1215,6 +1216,9 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                                                    iClientFrameSizeSamples,
                                                    &vecvecbyCodedData[iChanCnt][0],
                                                    iCeltNumCodedBytes );
+
+                    // send separate mix to current clients
+                    vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
                 }
             }
         }
@@ -1225,10 +1229,11 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                 const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
 
                 memcpy ( &vecvecbyCodedData[iChanCnt][0], &vecsSendData[iOffset], iCeltNumCodedBytes );
+
+                // send separate mix to current clients
+                vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
             }
         }
-        // send separate mix to current clients
-        vecChannels[iCurChanID].PrepAndSendPacket ( &Socket, vecvecbyCodedData[iChanCnt], iCeltNumCodedBytes );
     }
 
     Q_UNUSED ( iUnused )
