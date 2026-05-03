@@ -490,7 +490,6 @@ void CServer::OnCLDisconnection ( CHostAddress InetAddr )
         vecChannels[iCurChanID].Disconnect();
         return;
     }
-    emit ClientDisconnected ( iCurChanID );
 }
 
 void CServer::OnAboutToQuit()
