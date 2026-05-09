@@ -50,6 +50,7 @@ CClient::CClient ( const quint16  iPortNumber,
     bIsInitializationPhase ( true ),
     bMuteOutStream ( false ),
     fMuteOutStreamGain ( 1.0f ),
+    bUseRawAudio ( false ),
     Socket ( &Channel, iPortNumber, iQosNumber, "", bNEnableIPv6 ),
     Sound ( AudioCallback, this, bNoAutoJackConnect, strNClientName ),
     iAudioInFader ( AUD_FADER_IN_MIDDLE ),
@@ -71,8 +72,7 @@ CClient::CClient ( const quint16  iPortNumber,
     bEnableIPv6 ( bNEnableIPv6 ),
     bMuteMeInPersonalMix ( bNMuteMeInPersonalMix ),
     iServerSockBufNumFrames ( DEF_NET_BUF_SIZE_NUM_BL ),
-    bRawAudioIsSupported ( false ),
-    bUseRawAudio ( false )
+    bRawAudioIsSupported ( false )
 {
     int iOpusError;
 
