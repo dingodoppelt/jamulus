@@ -149,6 +149,7 @@ public:
         }
     }
     void CreateClientIDMes ( const int iChanID ) { Protocol.CreateClientIDMes ( iChanID ); }
+    void CreateRawAudioSupportedMes() { Protocol.CreateRawAudioSupportedMes(); }
     void CreateReqNetwTranspPropsMes() { Protocol.CreateReqNetwTranspPropsMes(); }
     void CreateReqSplitMessSupportMes() { Protocol.CreateReqSplitMessSupportMes(); }
     void CreateReqJitBufMes() { Protocol.CreateReqJitBufMes(); }
