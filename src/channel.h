@@ -273,6 +273,7 @@ signals:
     void ConClientListMesReceived ( CVector<CChannelInfo> vecChanInfo );
     void ChanInfoHasChanged();
     void ClientIDReceived ( int iChanID );
+    void RawAudioSupported();
     void MuteStateHasChanged ( int iChanID, bool bIsMuted );
     void MuteStateHasChangedReceived ( int iChanID, bool bIsMuted );
     void ReqChanInfo();

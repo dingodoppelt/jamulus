@@ -133,11 +133,13 @@ CClient::CClient ( const quint16  iPortNumber,
 
     QObject::connect ( &Channel, &CChannel::ClientIDReceived, this, &CClient::OnClientIDReceived );
 
+    QObject::connect ( &Channel, &CChannel::RawAudioSupported, this, &CClient::OnRawAudioSupported );
+
     QObject::connect ( &Channel, &CChannel::MuteStateHasChangedReceived, this, &CClient::OnMuteStateHasChangedReceived );
 
     QObject::connect ( &Channel, &CChannel::LicenceRequired, this, &CClient::LicenceRequired );
 
-    QObject::connect ( &Channel, &CChannel::VersionAndOSReceived, this, &CClient::OnVersionAndOSReceived );
+    QObject::connect ( &Channel, &CChannel::VersionAndOSReceived, this, &CClient::VersionAndOSReceived );
 
     QObject::connect ( &Channel, &CChannel::RecorderStateReceived, this, &CClient::RecorderStateReceived );
 
@@ -395,32 +397,6 @@ void CClient::OnConClientListMesReceived ( CVector<CChannelInfo> vecChanInfo )
     // pass the received list onwards, now containing client channel IDs
 
     emit ConClientListMesReceived ( vecChanInfo );
-}
-
-void CClient::OnVersionAndOSReceived ( COSUtil::EOpSystemType eOSType, QString strVersion )
-{
-#if QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 )
-    const bool bWasRunning = Sound.IsRunning();
-    if ( bWasRunning )
-    {
-        Sound.Stop();
-    }
-    if ( QVersionNumber::compare ( QVersionNumber::fromString ( strVersion ), QVersionNumber ( 3, 11, 1 ) ) == 0 )
-    {
-        bRawAudioIsSupported = true;
-        Init();
-    }
-    else
-    {
-        bRawAudioIsSupported = false;
-        Init();
-    }
-    if ( bWasRunning )
-    {
-        Sound.Start();
-    }
-#endif
-    emit VersionAndOSReceived ( eOSType, strVersion );
 }
 
 void CClient::CreateServerJitterBufferMessage()
@@ -1015,6 +991,27 @@ void CClient::OnClientIDReceived ( int iServerChanID )
     }
 
     emit ClientIDReceived ( iChanID );
+}
+
+void CClient::OnRawAudioSupported()
+{
+    if ( !bRawAudioIsSupported )
+    {
+        const bool bWasRunning = Sound.IsRunning();
+
+        if ( bWasRunning )
+        {
+            Sound.Stop();
+        }
+
+        bRawAudioIsSupported = true;
+        Init();
+
+        if ( bWasRunning )
+        {
+            Sound.Start();
+        }
+    }
 }
 
 void CClient::Start()
