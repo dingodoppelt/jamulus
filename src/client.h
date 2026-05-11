@@ -368,7 +368,6 @@ protected:
     bool                   bMuteOutStream;
     float                  fMuteOutStreamGain;
     CVector<unsigned char> vecCeltData;
-    bool                   bUseRawAudio;
 
     CHighPrioSocket         Socket;
     CSound                  Sound;
