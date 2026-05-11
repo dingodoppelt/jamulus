@@ -757,7 +757,7 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
     int                iUnused;
     int                iClientFrameSizeSamples = 0; // initialize to avoid a compiler warning
     OpusCustomDecoder* CurOpusDecoder;
-    unsigned char*     pCurCodedData = nullptr; // Only used with opus coding, nullptr in case of raw or packet loss
+    unsigned char*     pCurCodedData;
 
     // get actual ID of current channel
     const int iCurChanID = vecChanIDsCurConChan[iChanCnt];
@@ -877,7 +877,17 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
                 return;
             }
 
-            const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
+            // get pointer to coded data
+            if ( eGetStat == GS_BUFFER_OK )
+            {
+                pCurCodedData = &vecvecbyCodedData[iChanCnt][0];
+            }
+            else
+            {
+                // for lost packets use null pointer as coded input data
+                pCurCodedData = nullptr;
+            }
+
             // Recognise a raw audio packet by its size:
             // The client doesn't pass a value for the selected audio quality implicitly.
             // Rather the server is passed the length of the data sent by the client in iClientFrameSizeSamples.
@@ -890,34 +900,29 @@ void CServer::DecodeReceiveData ( const int iChanCnt, const int iNumClients )
             const bool bIsRawAudio =
                 ( iCeltNumCodedBytes == static_cast<int> ( sizeof ( int16_t ) * iClientFrameSizeSamples * vecNumAudioChannels[iChanCnt] ) );
 
-            // get pointer to coded data
-            if ( eGetStat == GS_BUFFER_OK )
+            const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
+
+            if ( !bIsRawAudio )
             {
-                if ( bIsRawAudio )
+                // OPUS decode received data stream
+                if ( CurOpusDecoder != nullptr )
                 {
-                    memcpy ( &vecvecsData[iChanCnt][iOffset], &vecvecbyCodedData[iChanCnt][0], iCeltNumCodedBytes );
+                    iUnused = opus_custom_decode ( CurOpusDecoder,
+                                                   pCurCodedData,
+                                                   iCeltNumCodedBytes,
+                                                   &vecvecsData[iChanCnt][iOffset],
+                                                   iClientFrameSizeSamples );
                 }
-                else
-                {
-                    pCurCodedData = &vecvecbyCodedData[iChanCnt][0];
-                }
+            }
+            else if ( pCurCodedData != nullptr )
+            {
+                // copy received raw data stream
+                memcpy ( &vecvecsData[iChanCnt][iOffset], pCurCodedData, iCeltNumCodedBytes );
             }
             else
             {
-                if ( bIsRawAudio )
-                {
-                    memset ( &vecvecsData[iChanCnt][iOffset], 0, iCeltNumCodedBytes );
-                }
-            }
-
-            // OPUS decode received data stream
-            if ( !bIsRawAudio && CurOpusDecoder != nullptr )
-            {
-                iUnused = opus_custom_decode ( CurOpusDecoder,
-                                               pCurCodedData,
-                                               iCeltNumCodedBytes,
-                                               &vecvecsData[iChanCnt][iOffset],
-                                               iClientFrameSizeSamples );
+                // lost packet - fill with silence
+                memset ( &vecvecsData[iChanCnt][iOffset], 0, iCeltNumCodedBytes );
             }
         }
 
