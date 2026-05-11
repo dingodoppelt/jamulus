@@ -1130,7 +1130,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
     }
 
     int                iClientFrameSizeSamples = 0; // initialize to avoid a compiler warning
-    OpusCustomEncoder* pCurOpusEncoder         = nullptr;
+    OpusCustomEncoder* CurOpusEncoder          = nullptr;
 
     // get current number of CELT coded bytes
     const int iCeltNumCodedBytes = vecChannels[iCurChanID].GetCeltNumCodedBytes();
@@ -1142,11 +1142,11 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
 
         if ( vecNumAudioChannels[iChanCnt] == 1 )
         {
-            pCurOpusEncoder = OpusEncoderMono[iCurChanID];
+            CurOpusEncoder = OpusEncoderMono[iCurChanID];
         }
         else
         {
-            pCurOpusEncoder = OpusEncoderStereo[iCurChanID];
+            CurOpusEncoder = OpusEncoderStereo[iCurChanID];
         }
     }
     else if ( vecAudioComprType[iChanCnt] == CT_OPUS64 )
@@ -1155,11 +1155,11 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
 
         if ( vecNumAudioChannels[iChanCnt] == 1 )
         {
-            pCurOpusEncoder = Opus64EncoderMono[iCurChanID];
+            CurOpusEncoder = Opus64EncoderMono[iCurChanID];
         }
         else
         {
-            pCurOpusEncoder = Opus64EncoderStereo[iCurChanID];
+            CurOpusEncoder = Opus64EncoderStereo[iCurChanID];
         }
     }
 
@@ -1180,12 +1180,12 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
         if ( iCeltNumCodedBytes != static_cast<int> ( sizeof ( int16_t ) * iClientFrameSizeSamples * vecNumAudioChannels[iChanCnt] ) )
         {
             // OPUS encoding
-            if ( pCurOpusEncoder != nullptr )
+            if ( CurOpusEncoder != nullptr )
             {
                 //### TODO: BEGIN ###//
                 // find a better place than this: the setting does not change all the time so for speed
                 // optimization it would be better to set it only if the network frame size is changed
-                opus_custom_encoder_ctl ( pCurOpusEncoder,
+                opus_custom_encoder_ctl ( CurOpusEncoder,
                                           OPUS_SET_BITRATE ( CalcBitRateBitsPerSecFromCodedBytes ( iCeltNumCodedBytes, iClientFrameSizeSamples ) ) );
                 //### TODO: END ###//
 
@@ -1193,7 +1193,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                 {
                     const int iOffset = iB * SYSTEM_FRAME_SIZE_SAMPLES * vecNumAudioChannels[iChanCnt];
 
-                    iUnused = opus_custom_encode ( pCurOpusEncoder,
+                    iUnused = opus_custom_encode ( CurOpusEncoder,
                                                    &vecsSendData[iOffset],
                                                    iClientFrameSizeSamples,
                                                    &vecvecbyCodedData[iChanCnt][0],
