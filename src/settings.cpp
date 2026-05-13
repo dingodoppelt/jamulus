@@ -460,6 +460,18 @@ void CClientSettings::ReadSettingsFromXML ( const QDomDocument& IniXMLDocument, 
         bEnableAudioAlerts = bValue;
     }
 
+    // sort server list by column
+    if ( GetNumericIniSet ( IniXMLDocument, "client", "sortbycolumn", 0, 7, iValue ) )
+    {
+        iSortByColumn = iValue;
+    }
+
+    // sort order is ascending
+    if ( GetFlagIniSet ( IniXMLDocument, "client", "sortorderascending", bValue ) )
+    {
+        bSortOrderAscending = bValue;
+    }
+
     // name
     pClient->ChannelInfo.strName = FromBase64ToString (
         GetIniSetting ( IniXMLDocument, "client", "name_base64", ToBase64 ( QCoreApplication::translate ( "CMusProfDlg", "No Name" ) ) ) );
@@ -926,6 +938,12 @@ void CClientSettings::WriteSettingsToXML ( QDomDocument& IniXMLDocument, bool is
 
     // audio alerts
     SetFlagIniSet ( IniXMLDocument, "client", "enableaudioalerts", bEnableAudioAlerts );
+
+    // sort server list by column
+    SetNumericIniSet ( IniXMLDocument, "client", "sortbycolumn", iSortByColumn );
+
+    // sort order is ascending
+    SetFlagIniSet ( IniXMLDocument, "client", "sortorderascending", bSortOrderAscending );
 
     // name
     PutIniSetting ( IniXMLDocument, "client", "name_base64", ToBase64 ( pClient->ChannelInfo.strName ) );
