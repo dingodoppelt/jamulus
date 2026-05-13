@@ -406,7 +406,8 @@ HEADERS += src/plugins/audioreverb.h \
     src/recorder/creaperproject.h \
     src/recorder/cwavestream.h \
     src/signalhandler.h \
-    libs/mverb/MVerb.h
+    libs/mverb/MVerb.h \
+    src/streamer/jamstreamer.h
 
 !contains(CONFIG, "serveronly") {
     HEADERS += src/client.h \
@@ -513,7 +514,8 @@ SOURCES += src/plugins/audioreverb.cpp \
     src/util.cpp \
     src/recorder/jamrecorder.cpp \
     src/recorder/creaperproject.cpp \
-    src/recorder/cwavestream.cpp
+    src/recorder/cwavestream.cpp \
+    src/streamer/jamstreamer.cpp
 
 !contains(CONFIG, "serveronly") {
     SOURCES += src/client.cpp \
