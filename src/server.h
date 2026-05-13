@@ -65,6 +65,7 @@
 #include "serverlogging.h"
 #include "serverlist.h"
 #include "recorder/jamcontroller.h"
+#include "streamer/jamstreamer.h"
 
 #include "threadpool.h"
 
@@ -193,6 +194,9 @@ public:
 
     void SendChatTextToAllConChannels ( const int iSendingChanID, const QString& strChatText );
     bool SendChatTextToConChannel ( const int iCurChanID, const QString& strChatText );
+#ifndef _WIN32
+    streamer::CJamStreamer* pJamStreamer;
+#endif
 
 protected:
     // access functions for actual channels
@@ -225,6 +229,8 @@ protected:
     void DecodeReceiveData ( const int iChanCnt, const int iNumClients );
 
     void MixEncodeTransmitData ( const int iChanCnt, const int iNumClients );
+
+    void MixStream ( const int iNumClients );
 
     virtual void customEvent ( QEvent* pEvent );
 
@@ -341,6 +347,8 @@ signals:
                       const CVector<int16_t> vecsData );
 
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     // pass through from jam controller
     void RestartRecorder();
