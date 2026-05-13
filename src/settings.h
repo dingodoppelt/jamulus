@@ -252,6 +252,8 @@ public:
     int              iCustomDirectoryIndex; // index of selected custom directory
     bool             bEnableFeedbackDetection;
     bool             bEnableAudioAlerts;
+    int              iSortByColumn;
+    bool             bSortOrderAscending;
 
     // window position/state settings
     QByteArray vecWindowPosSettings;
