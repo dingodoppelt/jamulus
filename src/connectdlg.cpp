@@ -45,6 +45,7 @@
 \******************************************************************************/
 
 #include "connectdlg.h"
+#include "util.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK( 6, 8, 0 )
 #    include <QAccessible>
@@ -246,12 +247,7 @@ CConnectDlg::CConnectDlg ( CClient* pNCliP, CClientSettings* pNSetP, const bool 
     // make sure the connect button has the focus
     butConnect->setFocus();
 
-    // for "show all servers" mode make sort by click on header possible
-    if ( bShowCompleteRegList )
-    {
-        lvwServers->setSortingEnabled ( true );
-        lvwServers->sortItems ( LVC_NAME, Qt::AscendingOrder );
-    }
+    lvwServers->setSortingEnabled ( true );
 
     // set a placeholder text to explain how to filter occupied servers (#397)
     edtFilter->setPlaceholderText ( tr ( "Filter text, or # for occupied servers" ) );
@@ -310,6 +306,9 @@ void CConnectDlg::showEvent ( QShowEvent* )
             cbxServerAddr->addItem ( pSettings->vstrIPAddress[iLEIdx] );
         }
     }
+
+    int iNSortByColumn = ( MathUtils::InRange<int> ( pSettings->iSortByColumn, 0, LVC_COLUMNS ) ) ? pSettings->iSortByColumn : LVC_PING;
+    lvwServers->sortByColumn ( pSettings->iSortByColumn, pSettings->bSortOrderAscending ? Qt::AscendingOrder : Qt::DescendingOrder );
 
     // on opening the connect dialg, we always want to request a
     // new updated server list per definition
@@ -372,6 +371,10 @@ void CConnectDlg::RequestServerList()
 
 void CConnectDlg::hideEvent ( QHideEvent* )
 {
+    // save the column the list is sorted by
+    pSettings->iSortByColumn       = lvwServers->sortColumn();
+    pSettings->bSortOrderAscending = ( lvwServers->header()->sortIndicatorOrder() == Qt::AscendingOrder );
+
     // if window is closed, stop timers
     TimerPing.stop();
     TimerReRequestServList.stop();
@@ -941,7 +944,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
     {
         // check if this is the first time a ping time is set
         const bool bIsFirstPing = pCurListViewItem->text ( LVC_PING ).isEmpty();
-        bool       bDoSorting   = false;
 
         // update minimum ping time column (invisible, used for sorting) if
         // the new value is smaller than the old value
@@ -955,9 +957,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
             // we pad to a total of 8 characters with zeros to make sure the
             // sorting is done correctly
             pCurListViewItem->setText ( LVC_PING_MIN_HIDDEN, QString ( "%1" ).arg ( iPingTime, 8, 10, QLatin1Char ( '0' ) ) );
-
-            // update the sorting (lowest number on top)
-            bDoSorting = true;
         }
 
         // for debugging it is good to see the current ping time in the list
@@ -1030,18 +1029,6 @@ void CConnectDlg::SetPingTimeAndNumClientsResult ( const CHostAddress& InetAddr,
             {
                 OnCurrentServerItemChanged ( pCurListViewItem, nullptr );
             }
-        }
-
-        // Update sorting. Note that the sorting must be the last action for the
-        // current item since the topLevelItem(iIdx) is then no longer valid.
-        // To avoid that the list is sorted shortly before a double click (which
-        // could lead to connecting an incorrect server) the sorting is disabled
-        // as long as the mouse is over the list (but it is not disabled for the
-        // initial timer of about 2s, see TimerInitialSort) (#293).
-        if ( bDoSorting && !bShowCompleteRegList &&
-             ( TimerInitialSort.isActive() || !lvwServers->underMouse() ) ) // do not sort if "show all servers"
-        {
-            lvwServers->sortByColumn ( LVC_PING_MIN_HIDDEN, Qt::AscendingOrder );
         }
     }
 
