@@ -1139,6 +1139,7 @@ QString UsageArguments ( char** argv )
            "  -w, --welcomemessage    welcome message to display on connect\n"
            "                          (string or filename, HTML supported)\n"
            "  -z, --startminimized    start minimizied\n"
+           "      --noraw             disable raw audio\n"
            "\n"
            "Client only:\n"
            "  -c, --connect           connect to given Server address on startup\n"

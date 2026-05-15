@@ -50,6 +50,7 @@ public:
     bool Start();
     void HandleMethod ( const QString& strMethod, CRpcHandler pHandler );
     void BroadcastNotification ( const QString& strMethod, const QJsonObject& aParams );
+    QJsonObject getAvailableMethods();
 
     static QJsonObject CreateJsonRpcError ( int code, QString message );
 
