@@ -974,7 +974,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // mono
                     for ( i = 0; i < iServerFrameSizeSamples; i++ )
                     {
-                        vecfIntermProcBuf[i] += vecsData[i];
+                        vecfIntermProcBuf[i] += vecsData[i] / iNumClients / 32768;
                     }
                 }
                 else
@@ -982,7 +982,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // stereo: apply stereo-to-mono attenuation
                     for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
                     {
-                        vecfIntermProcBuf[i] += ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / 2;
+                        vecfIntermProcBuf[i] += ( ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / iNumClients / 2 ) / 32768;
                     }
                 }
             }
@@ -993,7 +993,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // mono
                     for ( i = 0; i < iServerFrameSizeSamples; i++ )
                     {
-                        vecfIntermProcBuf[i] += vecsData[i] * fGain;
+                        vecfIntermProcBuf[i] += ( vecsData[i] * fGain / iNumClients ) / 32768;
                     }
                 }
                 else
@@ -1001,7 +1001,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // stereo: apply stereo-to-mono attenuation
                     for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
                     {
-                        vecfIntermProcBuf[i] += fGain * ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / 2;
+                        vecfIntermProcBuf[i] += ( fGain * ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / iNumClients / 2 ) / 32768;
                     }
                 }
             }
@@ -1010,7 +1010,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
         // convert from double to short with clipping
         for ( i = 0; i < iServerFrameSizeSamples; i++ )
         {
-            vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] );
+            vecsSendData[i] = Float2Short ( vecfIntermProcBuf[i] * 32768 );
         }
     }
     else
