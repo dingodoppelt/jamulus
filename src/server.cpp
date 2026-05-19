@@ -974,7 +974,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // mono
                     for ( i = 0; i < iServerFrameSizeSamples; i++ )
                     {
-                        vecfIntermProcBuf[i] += vecsData[i] / iNumClients / _MAXSHORT;
+                        vecfIntermProcBuf[i] += vecsData[i] / _MAXSHORT;
                     }
                 }
                 else
@@ -982,7 +982,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // stereo: apply stereo-to-mono attenuation
                     for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
                     {
-                        vecfIntermProcBuf[i] += ( ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / iNumClients / 2 ) / _MAXSHORT;
+                        vecfIntermProcBuf[i] += ( ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / 2 ) / _MAXSHORT;
                     }
                 }
             }
@@ -993,7 +993,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // mono
                     for ( i = 0; i < iServerFrameSizeSamples; i++ )
                     {
-                        vecfIntermProcBuf[i] += ( vecsData[i] * fGain / iNumClients ) / _MAXSHORT;
+                        vecfIntermProcBuf[i] += ( vecsData[i] * fGain ) / _MAXSHORT;
                     }
                 }
                 else
@@ -1001,7 +1001,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
                     // stereo: apply stereo-to-mono attenuation
                     for ( i = 0, k = 0; i < iServerFrameSizeSamples; i++, k += 2 )
                     {
-                        vecfIntermProcBuf[i] += ( fGain * ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / iNumClients / 2 ) / _MAXSHORT;
+                        vecfIntermProcBuf[i] += ( fGain * ( static_cast<float> ( vecsData[k] ) + vecsData[k + 1] ) / 2 ) / _MAXSHORT;
                     }
                 }
             }
