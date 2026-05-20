@@ -3,6 +3,8 @@
 - Add uncompressed audio transmission - dedicated to the memory of Hans Petter Selasky (1982 - 2023)
   (contributed by @dingodoppelt)
 
+### 3.12.1+ (2026-05-20) ###
+
 ### 3.12.1 (2026-05-17) ###
 
 - Client: Fix occasional spurious version updated message display (#3691).
