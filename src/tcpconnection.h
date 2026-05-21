@@ -41,6 +41,7 @@ class CServer;  // forward declaration of CServer
 class CChannel; // forward declaration of CChannel
 
 #define TCP_CONNECT_TIMEOUT_MS    3000
+#define TCP_IDLE_TIMEOUT_MS       5000
 #define TCP_KEEPALIVE_INTERVAL_MS 15000
 
 /* Classes ********************************************************************/
@@ -77,6 +78,7 @@ private:
     CVector<uint8_t> vecbyRecBuf;
 
     QTimer TimerKeepalive;
+    QTimer TimerIdleTimeout;
 
 signals:
     void ProtocolCLMessageReceived ( int iRecID, CVector<uint8_t> vecbyMesBodyData, CHostAddress HostAdr, CTcpConnection* pTcpConnection );
@@ -86,4 +88,5 @@ private slots:
     void OnDisconnected();
     void OnReadyRead();
     void OnTimerKeepalive();
+    void OnTimerIdleTimeout();
 };

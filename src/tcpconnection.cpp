@@ -73,12 +73,18 @@ CTcpConnection::CTcpConnection ( QTcpSocket* pTcpSocket, const CHostAddress& tcp
     connect ( pTcpSocket, &QTcpSocket::readyRead, this, &CTcpConnection::OnReadyRead );
 
     connect ( this, &CTcpConnection::ProtocolCLMessageReceived, pServer, &CServer::OnProtocolCLMessageReceived );
+
+    // setup an idle timer on the server side only
+    connect ( &TimerIdleTimeout, &QTimer::timeout, this, &CTcpConnection::OnTimerIdleTimeout );
+    TimerIdleTimeout.setSingleShot ( true );
+    TimerIdleTimeout.start ( TCP_IDLE_TIMEOUT_MS );
 }
 
 void CTcpConnection::OnDisconnected()
 {
     qDebug() << "- Jamulus-TCP: disconnected from:" << tcpAddress.toString();
     TimerKeepalive.stop();
+    TimerIdleTimeout.stop();
     pTcpSocket->deleteLater();
     if ( pChannel && pChannel->GetTcpConnection() == this )
     {
@@ -183,12 +189,24 @@ void CTcpConnection::OnReadyRead()
     }
 
     qDebug() << "- end of readyRead(), bytesAvailable() =" << pTcpSocket->bytesAvailable();
+
+    if ( pServer )
+    {
+        // restart server idle timer allowing for keepalive interval
+        TimerIdleTimeout.start ( TCP_KEEPALIVE_INTERVAL_MS + TCP_IDLE_TIMEOUT_MS );
+    }
 }
 
 void CTcpConnection::OnTimerKeepalive()
 {
     // qDebug() << "- Keepalive timer" << this << "to TCP" << tcpAddress.toString();
     emit CLSendEmptyMes ( tcpAddress, this );
+}
+
+void CTcpConnection::OnTimerIdleTimeout()
+{
+    // qDebug() << "- ConnTimeout timer" << this << "from TCP" << tcpAddress.toString();
+    disconnectFromHost();
 }
 
 qint64 CTcpConnection::write ( const char* data, qint64 maxSize )
