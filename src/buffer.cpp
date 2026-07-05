@@ -59,66 +59,31 @@ void CNetBuf::Init ( const int iNewBlockSize, const int iNewNumBlocks, const boo
     // not have to implement special code for this case
     // only enter the "preserve" branch, if object was already initialized
     // and the block sizes are the same
-    if ( bPreserve && ( !bIsSimulation ) && bIsInitialized && ( iBlockSize == iNewBlockSize ) )
+    if ( bPreserve && ( !bIsSimulation ) && bIsInitialized && ( iBlockSize == iNewBlockSize ) && !bNUseSequenceNumber )
     {
         // extract all data from buffer in temporary storage
         CVector<CVector<uint8_t>> vecvecTempMemory = vecvecMemory; // allocate worst case memory by copying
 
-        int iTempSize = vecvecTempMemory.size(); // for bounds checking
+        int iTempSize = iNumBlocksMemory; // for bounds checking
 
-        if ( !bNUseSequenceNumber )
+        int iPreviousDataCnt = 0;
+
+        while ( iPreviousDataCnt < iTempSize && Get ( vecvecTempMemory[iPreviousDataCnt], iBlockSize ) )
         {
-            int iPreviousDataCnt = 0;
-
-            while ( iPreviousDataCnt < iTempSize && Get ( vecvecTempMemory[iPreviousDataCnt], iBlockSize ) )
-            {
-                iPreviousDataCnt++;
-            }
-
-            // now resize the buffer to the new size (buffer is empty after this operation)
-            Resize ( iNewNumBlocks, iNewBlockSize );
-
-            // copy the previous data back in the buffer (make sure we only copy as much
-            // data back as the new buffer size can hold)
-            int iDataCnt = 0;
-
-            // iPreviousDataCnt will be at most iTempSize, so an additional check on iDataCnt is not needed
-            while ( ( iDataCnt < iPreviousDataCnt ) && Put ( vecvecTempMemory[iDataCnt], iBlockSize ) )
-            {
-                iDataCnt++;
-            }
+            iPreviousDataCnt++;
         }
-        else
+
+        // now resize the buffer to the new size (buffer is empty after this operation)
+        Resize ( iNewNumBlocks, iNewBlockSize );
+
+        // copy the previous data back in the buffer (make sure we only copy as much
+        // data back as the new buffer size can hold)
+        int iDataCnt = 0;
+
+        // iPreviousDataCnt will be at most iTempSize, so an additional check on iDataCnt is not needed
+        while ( ( iDataCnt < iPreviousDataCnt ) && Put ( vecvecTempMemory[iDataCnt], iBlockSize ) )
         {
-            // store current complete buffer state in temporary memory
-            CVector<int> veciTempBlockValid ( iNumBlocksMemory );
-            const int    iOldNumBlocksMemory = iNumBlocksMemory;
-            const int    iOldBlockGetPos     = iBlockGetPos;
-            int          iCurBlockPos        = 0;
-
-            while ( iBlockGetPos < iNumBlocksMemory && iCurBlockPos < iTempSize )
-            {
-                veciTempBlockValid[iCurBlockPos] = veciBlockValid[iBlockGetPos];
-                vecvecTempMemory[iCurBlockPos++] = vecvecMemory[iBlockGetPos++];
-            }
-
-            for ( iBlockGetPos = 0; iBlockGetPos < iOldBlockGetPos && iCurBlockPos < iTempSize; iBlockGetPos++ )
-            {
-                veciTempBlockValid[iCurBlockPos] = veciBlockValid[iBlockGetPos];
-                vecvecTempMemory[iCurBlockPos++] = vecvecMemory[iBlockGetPos];
-            }
-
-            // now resize the buffer to the new size
-            Resize ( iNewNumBlocks, iNewBlockSize );
-
-            // write back the temporary data in new memory
-            iBlockGetPos = 0; // per definition
-
-            for ( int iCurPos = 0; iCurPos < std::min ( iNewNumBlocks, iOldNumBlocksMemory ) && iCurPos < iTempSize; iCurPos++ )
-            {
-                veciBlockValid[iCurPos] = veciTempBlockValid[iCurPos];
-                vecvecMemory[iCurPos]   = vecvecTempMemory[iCurPos];
-            }
+            iDataCnt++;
         }
     }
     else
@@ -132,21 +97,18 @@ void CNetBuf::Init ( const int iNewBlockSize, const int iNewNumBlocks, const boo
 
 void CNetBuf::Resize ( const int iNewNumBlocks, const int iNewBlockSize )
 {
-    // allocate memory for actual data buffer
-    vecvecMemory.Init ( iNewNumBlocks );
-    veciBlockValid.Init ( iNewNumBlocks, 0 ); // initialize with zeros = invalid
-
     if ( !bIsSimulation )
     {
-        for ( int iBlock = 0; iBlock < iNewNumBlocks; iBlock++ )
+        for ( int iBlock = 0; iBlock < DEF_NET_BUF_MEMSIZE; iBlock++ )
         {
             vecvecMemory[iBlock].Init ( iNewBlockSize );
         }
     }
 
     // init buffer pointers and buffer state (empty buffer) and store buffer properties
-    iBlockGetPos     = 0;
-    iBlockPutPos     = 0;
+    iBlockGetPos     = ( iBlockGetPos + ( iNumBlocksMemory - iNewNumBlocks ) );
+    iBlockGetPos     = ( iBlockGetPos < 0 ) ? iBlockGetPos + DEF_NET_BUF_MEMSIZE : iBlockGetPos % DEF_NET_BUF_MEMSIZE;
+    iBlockPutPos     = iBlockGetPos;
     eBufState        = BS_EMPTY;
     iBlockSize       = iNewBlockSize;
     iNumBlocksMemory = iNewNumBlocks;
@@ -217,7 +179,7 @@ bool CNetBuf::Put ( const CVector<uint8_t>& vecbyData, int iInSize )
 
                     if ( iBlockGetPos < 0 )
                     {
-                        iBlockGetPos += iNumBlocksMemory;
+                        iBlockGetPos += DEF_NET_BUF_MEMSIZE;
                     }
                 }
 
@@ -237,9 +199,9 @@ bool CNetBuf::Put ( const CVector<uint8_t>& vecbyData, int iInSize )
                     iSequenceNumberAtGetPos++;
                     iBlockGetPos++;
 
-                    if ( iBlockGetPos >= iNumBlocksMemory )
+                    if ( iBlockGetPos >= DEF_NET_BUF_MEMSIZE )
                     {
-                        iBlockGetPos -= iNumBlocksMemory;
+                        iBlockGetPos -= DEF_NET_BUF_MEMSIZE;
                     }
                 }
 
@@ -247,9 +209,9 @@ bool CNetBuf::Put ( const CVector<uint8_t>& vecbyData, int iInSize )
                 // we add an offset to the get position, we have to take care of wrapping)
                 iBlockPutPos = iBlockGetPos + iNumBlocksMemory - 1;
 
-                if ( iBlockPutPos >= iNumBlocksMemory )
+                if ( iBlockPutPos >= DEF_NET_BUF_MEMSIZE )
                 {
-                    iBlockPutPos -= iNumBlocksMemory;
+                    iBlockPutPos -= DEF_NET_BUF_MEMSIZE;
                 }
             }
             else
@@ -258,9 +220,9 @@ bool CNetBuf::Put ( const CVector<uint8_t>& vecbyData, int iInSize )
                 // we will write it at the correct position based on the sequence number
                 iBlockPutPos = iBlockGetPos + iSeqNumDiff;
 
-                if ( iBlockPutPos >= iNumBlocksMemory )
+                if ( iBlockPutPos >= DEF_NET_BUF_MEMSIZE )
                 {
-                    iBlockPutPos -= iNumBlocksMemory;
+                    iBlockPutPos -= DEF_NET_BUF_MEMSIZE;
                 }
             }
 
@@ -355,7 +317,7 @@ bool CNetBuf::Get ( CVector<uint8_t>& vecbyData, const int iOutSize )
     iSequenceNumberAtGetPos++; // wraps around automatically
 
     // take care about wrap around of get pointer
-    if ( iBlockGetPos == iNumBlocksMemory )
+    if ( iBlockGetPos == DEF_NET_BUF_MEMSIZE )
     {
         iBlockGetPos = 0;
     }
