@@ -90,6 +90,12 @@
 #define IIR_WEIGTH_UP_FAST     0.9997499687422
 #define IIR_WEIGTH_DOWN_FAST   0.999499875
 
+// We initialise the jitter buffer memory once with a fixed size and never touch it again
+// This gets rid of all reallocations, copying and resizing on the buffer memory
+// Existing buffer logic is untouched but we don't move data anymore, just pointers
+// Since we use an 8bit sequence number we choose the memory size accordingly
+#define DEF_NET_BUF_MEMSIZE 256
+
 /* Classes ********************************************************************/
 // Buffer base class -----------------------------------------------------------
 template<class TData>
@@ -255,7 +261,19 @@ protected:
 class CNetBuf
 {
 public:
-    CNetBuf ( const bool bNIsSim = false ) : iSequenceNumberAtGetPos ( 0 ), bIsSimulation ( bNIsSim ), bIsInitialized ( false ) {}
+    CNetBuf ( const bool bNIsSim = false ) :
+        iSequenceNumberAtGetPos ( 0 ),
+        bIsSimulation ( bNIsSim ),
+        bIsInitialized ( false ),
+        iBlockGetPos ( 0 ),
+        iBlockPutPos ( 0 )
+    {
+        // allocate memory for actual data buffer
+        // we do this once for the lifetime
+        // no need to reallocate, reinit or move data anymore
+        vecvecMemory.Init ( DEF_NET_BUF_MEMSIZE );
+        veciBlockValid.Init ( DEF_NET_BUF_MEMSIZE, 0 );
+    }
 
     void Init ( const int iNewBlockSize, const int iNewNumBlocks, const bool bNUseSequenceNumber, const bool bPreserve = false );
 
