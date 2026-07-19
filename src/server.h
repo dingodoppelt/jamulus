@@ -223,6 +223,8 @@ protected:
 
     static void MixEncodeTransmitDataBlocks ( CServer* pServer, const int iStartChanCnt, const int iStopChanCnt, const int iNumClients );
 
+    void MixStream ( const int iNumClients );
+
     void DecodeReceiveData ( const int iChanCnt, const int iNumClients );
 
     void MixEncodeTransmitData ( const int iChanCnt, const int iNumClients );
@@ -337,6 +339,8 @@ signals:
                       const CHostAddress     RecHostAddr,
                       const int              iNumAudChan,
                       const CVector<int16_t> vecsData );
+
+    void StreamFrame ( const int iServerFrameSizeSamples, const CVector<int16_t>& data );
 
     void CLVersionAndOSReceived ( CHostAddress InetAddr, COSUtil::EOpSystemType eOSType, QString strVersion );
 
