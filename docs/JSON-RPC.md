@@ -430,6 +430,25 @@ Results:
 | result.registrationStatus | string | The server registration status as string (see ESvrRegStatus and SerializeRegistrationStatus). |
 
 
+### jamulusserver/getStreamStatus
+
+Returns info about the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result.streamStatus | boolean | streaming status. |
+| result.streamEnabled | boolean | stream enabled status. |
+| result.streamDestination | string | address of the streaming server. |
+
+
 ### jamulusserver/privateChatMessage
 
 Sends a chat message to a single connected client.
@@ -517,6 +536,23 @@ Results:
 | result | string | Always "ok". |
 
 
+### jamulusserver/setStreamDestination
+
+Sets the stream destination.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params.strStreamDestination | string | Stream destination to ffmpeg. |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusserver/setWelcomeMessage
 
 Sets the server welcome message.
@@ -551,6 +587,23 @@ Results:
 | result | string | Always "acknowledged". To check if the recording was enabled, call `jamulusserver/getRecorderStatus` again. |
 
 
+### jamulusserver/startStream
+
+Starts the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
 ### jamulusserver/stopRecording
 
 Stops the server recording.
@@ -566,6 +619,40 @@ Results:
 | Name | Type | Description |
 | --- | --- | --- |
 | result | string | Always "acknowledged". To check if the recording was disabled, call `jamulusserver/getRecorderStatus` again. |
+
+
+### jamulusserver/stopStream
+
+Stops the stream.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
+
+
+### jamulusserver/toggleStream
+
+Toggles the stream to autostart (or not) when a client joins the server.
+
+Parameters:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| params | object | No parameters (empty object). |
+
+Results:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| result | string | Always "ok". |
 
 
 ## Notification reference
