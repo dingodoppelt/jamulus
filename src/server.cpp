@@ -1313,7 +1313,7 @@ void CServer::MixEncodeTransmitData ( const int iChanCnt, const int iNumClients 
 void CServer::MixStream ( const int iNumClients )
 {
     int               i, j, k;
-    CVector<int16_t>& vecsSendData      = vecvecsSendData[0]; // use reference for faster access
+    CVector<int16_t>& vecsSendData = vecvecsSendData[0]; // use reference for faster access
 
     vecsSendData.Reset ( 0 );
 
@@ -1339,7 +1339,7 @@ void CServer::MixStream ( const int iNumClients )
             for ( i = 0; i < ( 2 * iServerFrameSizeSamples ); i++ )
             {
                 vecsSendData[i] += vecsData[i];
-                if ( !MathUtils::InRange<short>(vecsSendData[i], _MINSHORT , _MAXSHORT ) )
+                if ( !MathUtils::InRange<short> ( vecsSendData[i], _MINSHORT, _MAXSHORT + 1 ) )
                 {
                     vecsSendData[i] < 0 ? _MINSHORT : _MAXSHORT;
                 }
