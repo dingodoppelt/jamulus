@@ -134,6 +134,7 @@ CConnectDlg::CConnectDlg ( CClient* pNCliP, CClientSettings* pNSetP, const bool 
                                "<br>" + tr ( "You can add custom directories in Advanced Settings." ) );
 
     lvwServers->setAccessibleName ( tr ( "Server list view" ) );
+    lvwServers->setTabKeyNavigation ( false );
 
     // server address
     QString strServAddrH = "<b>" + tr ( "Server Address" ) + ":</b> " +
