@@ -61,7 +61,9 @@
 #include "socket.h"
 #include "channel.h"
 #include "util.h"
-#include "plugins/audioreverb.h"
+#ifndef NO_REVERB
+#    include "plugins/audioreverb.h"
+#endif
 #include "buffer.h"
 #include "signalhandler.h"
 
@@ -188,7 +190,7 @@ public:
 
     int  GetAudioInFader() const { return iAudioInFader; }
     void SetAudioInFader ( const int iNV ) { iAudioInFader = iNV; }
-
+#ifndef NO_REVERB
     int  GetReverbLevel() const { return iReverbLevel; }
     int  GetReverbPreset() const { return AudioReverb.getPreset(); }
     void SetReverbLevel ( const int iNL ) { iReverbLevel = iNL; }
@@ -196,7 +198,7 @@ public:
 
     bool IsReverbOnLeftChan() const { return bReverbOnLeftChan; }
     void SetReverbOnLeftChan ( const bool bIL ) { bReverbOnLeftChan = bIL; }
-
+#endif
     void SetDoAutoSockBufSize ( const bool bValue );
     bool GetDoAutoSockBufSize() const { return Channel.GetDoAutoSockBufSize(); }
 
@@ -401,11 +403,13 @@ protected:
 
     CVector<uint8_t> vecbyNetwData;
 
-    std::atomic<int>  iAudioInFader;
-    std::atomic<bool> bReverbOnLeftChan;
-    std::atomic<int>  iReverbLevel;
-    CAudioReverb      AudioReverb;
-    std::atomic<int>  iInputBoost;
+    int iAudioInFader;
+#ifndef NO_REVERB
+    bool         bReverbOnLeftChan;
+    int          iReverbLevel;
+    CAudioReverb AudioReverb;
+#endif
+    int iInputBoost;
 
     int iSndCrdPrefFrameSizeFactor;
     int iSndCrdFrameSizeFactor;
