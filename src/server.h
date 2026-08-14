@@ -376,7 +376,7 @@ public slots:
         }
     }
 
-    void OnCLReqServerList ( CHostAddress InetAddr ) { ServerListManager.RetrieveAll ( InetAddr ); }
+    void OnCLReqServerList ( CHostAddress InetAddr, const bool bWithPing ) { ServerListManager.RetrieveAll ( InetAddr, bWithPing ); }
 
     void OnCLReqVersionAndOS ( CHostAddress InetAddr ) { ConnLessProtocol.CreateCLVersionAndOSMes ( InetAddr ); }
 
