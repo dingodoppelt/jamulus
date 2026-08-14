@@ -377,7 +377,9 @@ CONNECTION LESS MESSAGES
 
 - PROTMESSID_CLM_REQ_SERVER_LIST: Request server list
 
-    note: does not have any data -> n = 0
+    does not have any data -> n = 0 by default
+    If n != 0 the Directory is requested to not send an empty message to all servers
+    This will disable hole punching for certain servers that need it
 
 
 - PROTMESSID_CLM_SEND_EMPTY_MESSAGE: Send "empty message" message
@@ -926,7 +928,7 @@ void CProtocol::ParseConnectionLessMessageBody ( const CVector<uint8_t>& vecbyMe
         break;
 
     case PROTMESSID_CLM_REQ_SERVER_LIST:
-        EvaluateCLReqServerListMes ( InetAddr );
+        EvaluateCLReqServerListMes ( InetAddr, vecbyMesBodyData );
         break;
 
     case PROTMESSID_CLM_SEND_EMPTY_MESSAGE:
@@ -2299,10 +2301,10 @@ void CProtocol::CreateCLReqServerListMes ( const CHostAddress& InetAddr )
     CreateAndImmSendConLessMessage ( PROTMESSID_CLM_REQ_SERVER_LIST, CVector<uint8_t> ( 0 ), InetAddr );
 }
 
-bool CProtocol::EvaluateCLReqServerListMes ( const CHostAddress& InetAddr )
+bool CProtocol::EvaluateCLReqServerListMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData )
 {
     // invoke message action
-    emit CLReqServerList ( InetAddr );
+    emit CLReqServerList ( InetAddr, vecData.Size() == 0 );
 
     return false; // no error
 }

@@ -685,7 +685,7 @@ void CServerListManager::Remove ( const CHostAddress& InetAddr )
  and allow the client connect dialogue instead to use the IP and Port from which the list was received.
 
  */
-void CServerListManager::RetrieveAll ( const CHostAddress& InetAddr )
+void CServerListManager::RetrieveAll ( const CHostAddress& InetAddr, const bool bSendEmptyMessage )
 {
     QMutexLocker locker ( &Mutex );
 
@@ -731,7 +731,8 @@ void CServerListManager::RetrieveAll ( const CHostAddress& InetAddr )
             }
 
             // do not send a "ping" to a server local to the directory (no need)
-            if ( !serverIsInternal )
+            // a user can request to not send a ping to hide his IP address
+            if ( !serverIsInternal && bSendEmptyMessage )
             {
                 // create "send empty message" for all other registered servers
                 // this causes the server (vecServerInfo[iIdx].HostAddr)
