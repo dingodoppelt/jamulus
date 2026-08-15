@@ -172,6 +172,7 @@ public:
     void CreateCLServerListMes ( const CHostAddress& InetAddr, const CVector<CServerInfo> vecServerInfo );
     void CreateCLRedServerListMes ( const CHostAddress& InetAddr, const CVector<CServerInfo> vecServerInfo );
     void CreateCLReqServerListMes ( const CHostAddress& InetAddr );
+    void CreateCLReqServerListMes ( const CHostAddress& InetAddr, const CHostAddress& TargetInetAddr );
     void CreateCLSendEmptyMesMes ( const CHostAddress& InetAddr, const CHostAddress& TargetInetAddr );
     void CreateCLEmptyMes ( const CHostAddress& InetAddr );
     void CreateCLDisconnection ( const CHostAddress& InetAddr );

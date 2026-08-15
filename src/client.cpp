@@ -1170,6 +1170,16 @@ void CClient::Disconnect()
 /// @param strServerName - the human readable server name passed to Connecting()
 void CClient::Connect ( const QString& strServerAddress, const QString& strServerName )
 {
+    QStringList strlInetAddrs = strServerAddress.split ( u',' );
+    if ( strlInetAddrs.size() > 1 )
+    {
+        CHostAddress haServerAddr, haDirectoryAddr;
+        if ( NetworkUtil::ParseNetworkAddress ( strlInetAddrs[0], haDirectoryAddr, false ) &&
+             NetworkUtil::ParseNetworkAddress ( strlInetAddrs[1], haServerAddr, false ) )
+        {
+            ConnLessProtocol.CreateCLReqServerListMes ( haDirectoryAddr, haServerAddr );
+        }
+    }
     try
     {
         // disconnect from any current server first so that connecting to a

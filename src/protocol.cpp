@@ -2301,11 +2301,50 @@ void CProtocol::CreateCLReqServerListMes ( const CHostAddress& InetAddr )
     CreateAndImmSendConLessMessage ( PROTMESSID_CLM_REQ_SERVER_LIST, CVector<uint8_t> ( 0 ), InetAddr );
 }
 
+void CProtocol::CreateCLReqServerListMes ( const CHostAddress& InetAddr, const CHostAddress& TargetInetAddr )
+{
+    int iPos = 0; // init position pointer
+
+    // build data vector (6 bytes long)
+    CVector<uint8_t> vecData ( 6 );
+
+    // IP address (4 bytes)
+    PutValOnStream ( vecData, iPos, static_cast<uint32_t> ( TargetInetAddr.InetAddr.toIPv4Address() ), 4 );
+
+    // port number (2 bytes)
+    PutValOnStream ( vecData, iPos, static_cast<uint32_t> ( TargetInetAddr.iPort ), 2 );
+
+    CreateAndImmSendConLessMessage ( PROTMESSID_CLM_REQ_SERVER_LIST, vecData, InetAddr );
+}
+
 bool CProtocol::EvaluateCLReqServerListMes ( const CHostAddress& InetAddr, const CVector<uint8_t>& vecData )
 {
-    // invoke message action
-    emit CLReqServerList ( InetAddr, vecData.Size() == 0 );
+    switch ( vecData.Size() )
+    {
+    case 0:
+        // invoke message action
+        emit CLReqServerList ( InetAddr, true );
+        break;
+    case 1:
+        emit CLReqServerList ( InetAddr, false );
+        break;
+    case 6:
+    {
+        int iPos = 0; // init position pointer
 
+        // IP address (4 bytes)
+        const quint32 iIpAddr = static_cast<int> ( GetValFromStream ( vecData, iPos, 4 ) );
+
+        // port number (2 bytes)
+        const quint16 iPort = static_cast<int> ( GetValFromStream ( vecData, iPos, 2 ) );
+
+        // invoke message action
+        CreateCLSendEmptyMesMes ( CHostAddress ( QHostAddress ( iIpAddr ), iPort ), InetAddr );
+        break;
+    }
+    default:
+        return true; // error
+    }
     return false; // no error
 }
 
