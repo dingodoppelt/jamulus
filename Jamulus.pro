@@ -30,7 +30,8 @@ CONFIG += qt \
     thread \
     lrelease \
     embed_translations \
-    debug_and_release
+    debug_and_release \
+    c++17
 
 QT += network \
     xml \
@@ -104,8 +105,6 @@ DEFINES += APP_VERSION=\\\"$$VERSION\\\" \
 DEFINES += QT_NO_DEPRECATED_WARNINGS
 
 win32 {
-    # fixes error C7525: inline variables require at least '/std:c++17'
-    CONFIG += c++17
     DEFINES -= UNICODE # fixes issue with ASIO SDK (asiolist.cpp is not unicode compatible)
     DEFINES += NOMINMAX # solves a compiler error in qdatetime.h (Qt5)
     RC_FILE = src/res/win-mainicon.rc
@@ -268,9 +267,6 @@ win32 {
     ANDROID_VERSION_CODE = $$system(git log --oneline | wc -l)
     message("Setting ANDROID_VERSION_NAME=$${ANDROID_VERSION_NAME} ANDROID_VERSION_CODE=$${ANDROID_VERSION_CODE}")
 
-    # liboboe requires C++17 for std::timed_mutex
-    CONFIG += c++17
-
     QT += androidextras
 
     # enabled only for debugging on android devices
@@ -307,9 +303,6 @@ win32 {
     DISTFILES += $$DISTFILES_OBOE
     QMAKE_DISTCLEAN += android-$${TARGET}-deployment-settings.json
 } else:unix {
-    # we want to compile with C++11
-    CONFIG += c++11
-
     # --as-needed avoids linking the final binary against unnecessary runtime
     # libs. Most g++ versions already do that by default.
     # However, Debian buster does not and would link against libQt5Concurrent
