@@ -2326,9 +2326,11 @@ bool CProtocol::EvaluateCLReqServerListMes ( const CHostAddress& InetAddr, const
         emit CLReqServerList ( InetAddr, true );
         break;
     case 1:
+        // request server list without IP leak
         emit CLReqServerList ( InetAddr, false );
         break;
     case 6:
+        // pass server address to directory to assist with hole punching
     {
         int iPos = 0; // init position pointer
 
