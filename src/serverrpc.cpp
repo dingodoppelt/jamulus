@@ -102,9 +102,9 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
     /// @result {string} result - Always "ok".
     pRpcServer->HandleMethod ( "jamulusserver/broadcastChatMessage", [=] ( const QJsonObject& params, QJsonObject& response ) {
         auto jsonChatMessage = params["chatMessage"];
-        if ( !jsonChatMessage.isString() )
+        if ( !jsonChatMessage.isString() || jsonChatMessage.toString().size() > MAX_LEN_CHAT_TEXT )
         {
-            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatMessage is not a string" );
+            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatMessage is not a string or malformed" );
             return;
         }
 
@@ -297,9 +297,9 @@ CServerRpc::CServerRpc ( CServer* pServer, CRpcServer* pRpcServer, QObject* pare
     /// @result {string} result - Always "ok".
     pRpcServer->HandleMethod ( "jamulusserver/setServerName", [=] ( const QJsonObject& params, QJsonObject& response ) {
         auto jsonServerName = params["serverName"];
-        if ( !jsonServerName.isString() )
+        if ( !jsonServerName.isString() || jsonServerName.toString().size() > MAX_LEN_SERVER_NAME )
         {
-            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: serverName is not a string" );
+            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: serverName is not a string or malformed" );
             return;
         }
 

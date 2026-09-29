@@ -371,9 +371,9 @@ CClientRpc::CClientRpc ( CClient* pClient, CClientSettings* pSettings, CRpcServe
     /// @result {string} result - Always "ok".
     pRpcServer->HandleMethod ( "jamulusclient/sendChatText", [=] ( const QJsonObject& params, QJsonObject& response ) {
         auto jsonMessage = params["chatText"];
-        if ( !jsonMessage.isString() )
+        if ( !jsonMessage.isString() || jsonMessage.toString().size() > MAX_LEN_CHAT_TEXT )
         {
-            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatText is not a string" );
+            response["error"] = CRpcServer::CreateJsonRpcError ( CRpcServer::iErrInvalidParams, "Invalid params: chatText is not a string or malformed" );
             return;
         }
         if ( !pClient->IsConnected() )
